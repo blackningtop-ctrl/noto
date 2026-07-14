@@ -1,7 +1,8 @@
 {
-  "name": "notion-clone",
+  "name": "noto",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Free Notion-style workspace with bento grid UI — fully local, no subscription",
   "type": "module",
   "scripts": {
     "dev": "vite",
