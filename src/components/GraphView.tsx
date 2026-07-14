@@ -43,11 +43,10 @@ export function GraphView() {
       <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] px-6 py-4">
         <div className="flex items-center gap-2 font-semibold">
           <Network size={18} className="text-[var(--color-accent)]" />
-          그래프 뷰
+          노트 연결 보기
         </div>
         <span className="text-sm text-[var(--color-muted)]">
-          노드 {graph.nodes.length} · 연결 {graph.edges.length}
-          <span className="ml-2 opacity-70">(위키링크 · 부모/자식)</span>
+          노트 {graph.nodes.length}개 · 연결 {graph.edges.length}개
         </span>
         <div className="flex-1" />
         <div className="flex items-center gap-1">
@@ -81,7 +80,7 @@ export function GraphView() {
       <div className="relative min-h-0 flex-1 overflow-hidden bg-[var(--color-surface)]">
         {graph.nodes.length === 0 ? (
           <div className="flex h-full items-center justify-center text-sm text-[var(--color-muted)]">
-            페이지가 없습니다. 문서를 만들고 [[위키링크]]로 연결해 보세요.
+            아직 노트가 없어요. 노트를 만들고 [[다른 노트 이름]] 으로 연결해 보세요.
           </div>
         ) : (
           <svg
@@ -173,13 +172,13 @@ export function GraphView() {
 
         <div className="pointer-events-none absolute bottom-4 left-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)]/90 px-3 py-2 text-[11px] text-[var(--color-muted)] backdrop-blur">
           <div className="mb-1 flex items-center gap-2">
-            <span className="inline-block h-0.5 w-4 bg-[var(--color-accent)]" /> 위키링크
+            <span className="inline-block h-0.5 w-4 bg-[var(--color-accent)]" /> [[링크]] 연결
           </div>
           <div className="flex items-center gap-2">
             <span className="inline-block h-0.5 w-4 border-t border-dashed border-[var(--color-muted)]" />{' '}
-            부모 → 자식
+            폴더 구조
           </div>
-          <div className="mt-1">드래그 이동 · 휠 줌 · 노드 클릭</div>
+          <div className="mt-1">끌어서 이동 · 휠로 확대 · 눌러서 열기</div>
         </div>
       </div>
     </div>

@@ -13,11 +13,12 @@ export function Backlinks({ page }: { page: Page }) {
     return (
       <div className="mx-auto max-w-3xl px-4 pb-16 pt-8">
         <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
-          <Link2 size={12} /> 백링크
+          <Link2 size={12} /> 이 노트를 가리키는 곳
         </div>
         <p className="mt-2 text-sm text-[var(--color-muted)]">
-          다른 페이지에서 <code className="rounded bg-[var(--color-hover)] px-1">[[{page.title || '제목'}]]</code> 로
-          링크하면 여기에 표시됩니다.
+          다른 노트에서{' '}
+          <code className="rounded bg-[var(--color-hover)] px-1">[[{page.title || '제목'}]]</code> 라고
+          쓰면 여기에 나타나요.
         </p>
       </div>
     )

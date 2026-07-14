@@ -30,23 +30,23 @@ export interface SlashItem {
 }
 
 export const SLASH_ITEMS: SlashItem[] = [
-  { type: 'paragraph', label: '텍스트', description: '일반 문단', keywords: 'text paragraph 텍스트', icon: <Type size={18} /> },
-  { type: 'heading1', label: '제목 1', description: '큰 제목', keywords: 'h1 heading 제목', icon: <Heading1 size={18} /> },
-  { type: 'heading2', label: '제목 2', description: '중간 제목', keywords: 'h2 heading 제목', icon: <Heading2 size={18} /> },
-  { type: 'heading3', label: '제목 3', description: '작은 제목', keywords: 'h3 heading 제목', icon: <Heading3 size={18} /> },
-  { type: 'bullet', label: '글머리 기호', description: '순서 없는 목록', keywords: 'bullet list 목록', icon: <List size={18} /> },
-  { type: 'numbered', label: '번호 목록', description: '순서 있는 목록', keywords: 'numbered list 번호', icon: <ListOrdered size={18} /> },
-  { type: 'todo', label: '할 일', description: '체크리스트', keywords: 'todo checkbox 할일', icon: <CheckSquare size={18} /> },
-  { type: 'toggle', label: '토글', description: '접을 수 있는 블록', keywords: 'toggle 토글', icon: <ChevronRight size={18} /> },
-  { type: 'quote', label: '인용', description: '인용문', keywords: 'quote 인용', icon: <Quote size={18} /> },
-  { type: 'callout', label: '콜아웃', description: '강조 박스', keywords: 'callout 콜아웃', icon: <MessageSquare size={18} /> },
-  { type: 'code', label: '코드', description: '하이라이트 · 복사 · 언어', keywords: 'code 코드 highlight', icon: <Code2 size={18} /> },
-  { type: 'mermaid', label: 'Mermaid', description: '다이어그램', keywords: 'mermaid diagram 시퀀스 플로우', icon: <GitBranch size={18} /> },
-  { type: 'api', label: 'API 엔드포인트', description: 'Method · Path · Request/Response', keywords: 'api endpoint rest http', icon: <Globe size={18} /> },
-  { type: 'git', label: 'Git 메타', description: 'repo · branch · PR · issue', keywords: 'git github pr issue commit', icon: <GitIcon size={18} /> },
-  { type: 'table', label: '표', description: '간단한 테이블', keywords: 'table 표 테이블', icon: <Table size={18} /> },
-  { type: 'divider', label: '구분선', description: '시각적 구분', keywords: 'divider 구분선 hr', icon: <Minus size={18} /> },
-  { type: 'image', label: '이미지', description: 'URL 또는 로컬 업로드', keywords: 'image 이미지 upload', icon: <ImageIcon size={18} /> },
+  { type: 'paragraph', label: '글', description: '그냥 쓰기', keywords: 'text paragraph 텍스트 글', icon: <Type size={18} /> },
+  { type: 'heading1', label: '큰 제목', description: '제일 큰 제목', keywords: 'h1 heading 제목', icon: <Heading1 size={18} /> },
+  { type: 'heading2', label: '중간 제목', description: '중간 크기 제목', keywords: 'h2 heading 제목', icon: <Heading2 size={18} /> },
+  { type: 'heading3', label: '작은 제목', description: '작은 제목', keywords: 'h3 heading 제목', icon: <Heading3 size={18} /> },
+  { type: 'bullet', label: '목록', description: '점 목록', keywords: 'bullet list 목록', icon: <List size={18} /> },
+  { type: 'numbered', label: '번호 목록', description: '1, 2, 3…', keywords: 'numbered list 번호', icon: <ListOrdered size={18} /> },
+  { type: 'todo', label: '할 일', description: '체크박스', keywords: 'todo checkbox 할일', icon: <CheckSquare size={18} /> },
+  { type: 'toggle', label: '접기 상자', description: '눌러서 열고 닫기', keywords: 'toggle 토글', icon: <ChevronRight size={18} /> },
+  { type: 'quote', label: '인용', description: '강조 문장', keywords: 'quote 인용', icon: <Quote size={18} /> },
+  { type: 'callout', label: '알림 상자', description: '중요한 메모', keywords: 'callout 콜아웃 알림', icon: <MessageSquare size={18} /> },
+  { type: 'table', label: '표', description: '칸 나누기', keywords: 'table 표 테이블', icon: <Table size={18} /> },
+  { type: 'image', label: '사진', description: '올리거나 주소 붙이기', keywords: 'image 이미지 사진', icon: <ImageIcon size={18} /> },
+  { type: 'divider', label: '구분선', description: '가로줄', keywords: 'divider 구분선 hr', icon: <Minus size={18} /> },
+  { type: 'code', label: '코드', description: '프로그래밍 코드', keywords: 'code 코드', icon: <Code2 size={18} /> },
+  { type: 'mermaid', label: '그림 도식', description: '흐름도 (고급)', keywords: 'mermaid diagram 도식', icon: <GitBranch size={18} /> },
+  { type: 'api', label: 'API 카드', description: '개발용 (고급)', keywords: 'api endpoint', icon: <Globe size={18} /> },
+  { type: 'git', label: 'Git 카드', description: '개발용 (고급)', keywords: 'git github', icon: <GitIcon size={18} /> },
 ]
 
 interface Props {
@@ -105,7 +105,7 @@ export function SlashMenu({ query, onSelect, onClose }: Props) {
   return (
     <div className="slash-menu" ref={ref}>
       <div className="px-2 py-1.5 text-xs font-medium" style={{ color: 'var(--color-muted)' }}>
-        기본 블록
+        넣을 수 있는 것
       </div>
       {items.map((item, i) => (
         <button

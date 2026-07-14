@@ -40,9 +40,9 @@ export function SnippetsView() {
     <div className="fade-in mx-auto max-w-5xl px-6 py-10">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">스니펫 라이브러리</h1>
-          <p className="mt-1 text-sm text-[var(--color-muted)]">
-            보일러플레이트를 저장하고 현재 페이지에 코드 블록으로 삽입합니다. Ctrl+K 에서도 검색 가능합니다.
+          <h1 className="text-2xl font-bold">코드 모음</h1>
+          <p className="mt-1 text-sm leading-relaxed text-[var(--color-muted)]">
+            자주 쓰는 코드나 문장을 저장해 두고, 노트에 한 번에 넣을 수 있어요. (프로그래밍할 때 편리)
           </p>
         </div>
         <button

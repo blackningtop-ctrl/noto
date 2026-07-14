@@ -11,19 +11,17 @@ import {
   Trash2,
   Database,
   FileText,
-  Download,
-  Upload,
   Moon,
   Sun,
   PanelLeftClose,
   PanelLeft,
   MoreHorizontal,
   Copy,
-  RotateCcw,
   Network,
   Code2,
-  FolderSync,
+  FolderOutput,
   Settings,
+  HelpCircle,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -39,10 +37,6 @@ export function Sidebar() {
   const reorderPage = useStore((s) => s.reorderPage)
   const theme = useStore((s) => s.theme)
   const toggleTheme = useStore((s) => s.toggleTheme)
-  const exportData = useStore((s) => s.exportData)
-  const importData = useStore((s) => s.importData)
-  const markBackupNow = useStore((s) => s.markBackupNow)
-  const resetWorkspace = useStore((s) => s.resetWorkspace)
   const setCommandPaletteOpen = useStore((s) => s.setCommandPaletteOpen)
   const pages = useActivePages()
   const favorites = pages.filter((p) => p.favorite)
@@ -53,6 +47,7 @@ export function Sidebar() {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [menuId, setMenuId] = useState<string | null>(null)
   const [dragId, setDragId] = useState<string | null>(null)
+  const [moreOpen, setMoreOpen] = useState(false)
 
   const childrenOf = useMemo(() => {
     const map: Record<string, Page[]> = {}
@@ -68,30 +63,6 @@ export function Sidebar() {
     return map
   }, [pages])
 
-  const downloadExport = () => {
-    const blob = new Blob([exportData()], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `noto-backup-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(url)
-    markBackupNow()
-  }
-
-  const onImport = () => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = 'application/json'
-    input.onchange = async () => {
-      const file = input.files?.[0]
-      if (!file) return
-      const text = await file.text()
-      if (!importData(text)) alert('가져오기에 실패했습니다. JSON 형식을 확인하세요.')
-    }
-    input.click()
-  }
-
   const renderTree = (list: Page[], depth = 0) =>
     list.map((page) => {
       const kids = childrenOf[page.id] ?? []
@@ -101,8 +72,8 @@ export function Sidebar() {
         <div key={page.id}>
           <div
             className={clsx(
-              'group flex items-center gap-0.5 rounded-lg px-1 py-0.5 text-sm',
-              active ? 'bg-[var(--color-hover)] font-medium' : 'hover:bg-[var(--color-hover)]',
+              'group flex items-center gap-0.5 rounded-xl px-1 py-0.5 text-[13px]',
+              active ? 'bg-[var(--color-accent-soft)] font-medium text-[var(--color-accent)]' : 'hover:bg-[var(--color-hover)]',
               dragId === page.id && 'opacity-50',
             )}
             style={{ paddingLeft: 4 + depth * 12 }}
@@ -133,8 +104,9 @@ export function Sidebar() {
           >
             <button
               type="button"
-              className="rounded p-0.5 text-[var(--color-muted)]"
+              className="rounded-md p-0.5 text-[var(--color-muted)]"
               onClick={() => setExpanded((e) => ({ ...e, [page.id]: !isOpen }))}
+              aria-label="펼치기"
             >
               {kids.length > 0 ? (
                 isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />
@@ -144,31 +116,34 @@ export function Sidebar() {
             </button>
             <button
               type="button"
-              className="flex min-w-0 flex-1 items-center gap-1.5 truncate py-1 text-left"
+              className="flex min-w-0 flex-1 items-center gap-1.5 truncate py-1.5 text-left"
               onClick={() => setView({ kind: 'page', pageId: page.id })}
             >
-              <span>{page.icon}</span>
+              <span className="text-base leading-none">{page.icon}</span>
               <span className="truncate">{page.title || '제목 없음'}</span>
               {page.type === 'database' && (
-                <Database size={12} className="shrink-0 text-[var(--color-muted)]" />
+                <span className="shrink-0 rounded bg-[var(--color-hover)] px-1 text-[10px] text-[var(--color-muted)]">
+                  표
+                </span>
               )}
             </button>
             <div className="relative opacity-0 group-hover:opacity-100">
               <button
                 type="button"
-                className="rounded p-1 hover:bg-[var(--color-border)]"
+                className="rounded-md p-1 hover:bg-[var(--color-border)]"
                 onClick={() => setMenuId(menuId === page.id ? null : page.id)}
+                aria-label="메뉴"
               >
                 <MoreHorizontal size={14} />
               </button>
               {menuId === page.id && (
                 <div
-                  className="absolute right-0 top-full z-50 mt-1 w-40 rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-1 shadow-xl"
+                  className="absolute right-0 top-full z-50 mt-1 w-44 rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-1 shadow-xl"
                   onMouseLeave={() => setMenuId(null)}
                 >
                   <MenuBtn
                     icon={<Plus size={14} />}
-                    label="하위 페이지"
+                    label="안에 새 노트"
                     onClick={() => {
                       createPage({ parentId: page.id })
                       setExpanded((e) => ({ ...e, [page.id]: true }))
@@ -177,7 +152,7 @@ export function Sidebar() {
                   />
                   <MenuBtn
                     icon={<Star size={14} />}
-                    label={page.favorite ? '즐겨찾기 해제' : '즐겨찾기'}
+                    label={page.favorite ? '즐겨찾기 빼기' : '즐겨찾기'}
                     onClick={() => {
                       toggleFavorite(page.id)
                       setMenuId(null)
@@ -185,7 +160,7 @@ export function Sidebar() {
                   />
                   <MenuBtn
                     icon={<Copy size={14} />}
-                    label="복제"
+                    label="복사하기"
                     onClick={() => {
                       duplicatePage(page.id)
                       setMenuId(null)
@@ -193,7 +168,7 @@ export function Sidebar() {
                   />
                   <MenuBtn
                     icon={<Trash2 size={14} />}
-                    label="휴지통으로"
+                    label="삭제"
                     danger
                     onClick={() => {
                       deletePage(page.id)
@@ -213,9 +188,9 @@ export function Sidebar() {
     return (
       <button
         type="button"
-        className="fixed left-3 top-3 z-40 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-2 shadow-sm"
+        className="fixed left-3 top-3 z-40 rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-2.5 shadow-sm"
         onClick={() => setSidebarOpen(true)}
-        title="사이드바 열기"
+        title="메뉴 열기"
       >
         <PanelLeft size={18} />
       </button>
@@ -223,68 +198,46 @@ export function Sidebar() {
   }
 
   return (
-    <aside
-      className="flex h-full w-[260px] shrink-0 flex-col border-r border-[var(--color-border)]"
-      style={{ background: 'var(--color-sidebar)' }}
-    >
-      <div className="flex items-center justify-between px-3 py-3">
-        <div className="flex items-center gap-2 font-semibold tracking-tight">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--color-text)] text-sm text-[var(--color-panel)]">
-            N
-          </span>
-          Noto
-        </div>
+    <aside className="sidebar flex h-full w-[268px] shrink-0 flex-col">
+      <div className="flex items-center justify-between px-3 pb-1 pt-3">
         <button
           type="button"
-          className="rounded-lg p-1.5 hover:bg-[var(--color-hover)]"
+          className="flex items-center gap-2 rounded-xl px-1.5 py-1 font-semibold tracking-tight hover:bg-[var(--color-hover)]"
+          onClick={() => setView({ kind: 'home' })}
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--color-text)] text-sm font-bold text-[var(--color-panel)]">
+            N
+          </span>
+          <span>Noto</span>
+        </button>
+        <button
+          type="button"
+          className="rounded-lg p-1.5 text-[var(--color-muted)] hover:bg-[var(--color-hover)]"
           onClick={() => setSidebarOpen(false)}
+          title="메뉴 접기"
         >
           <PanelLeftClose size={16} />
         </button>
       </div>
 
-      <div className="space-y-0.5 px-2">
-        <NavItem
-          icon={<Search size={16} />}
-          label="커맨드 팔레트"
+      <div className="px-2 pt-1">
+        <button
+          type="button"
           onClick={() => setCommandPaletteOpen(true)}
-          hint="Ctrl+K"
-        />
-        <NavItem
-          icon={<Search size={16} />}
-          label="검색"
-          active={view.kind === 'search'}
-          onClick={() => setView({ kind: 'search' })}
-        />
+          className="flex w-full items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-2 text-left text-[13px] text-[var(--color-muted)] shadow-sm transition hover:border-[var(--color-accent)]"
+        >
+          <Search size={15} />
+          <span className="flex-1">찾기…</span>
+          <kbd className="rounded-md bg-[var(--color-hover)] px-1.5 py-0.5 text-[10px]">Ctrl+K</kbd>
+        </button>
+      </div>
+
+      <div className="mt-2 space-y-0.5 px-2">
         <NavItem
           icon={<Home size={16} />}
           label="홈"
           active={view.kind === 'home'}
           onClick={() => setView({ kind: 'home' })}
-        />
-        <NavItem
-          icon={<Network size={16} />}
-          label="그래프"
-          active={view.kind === 'graph'}
-          onClick={() => setView({ kind: 'graph' })}
-        />
-        <NavItem
-          icon={<Code2 size={16} />}
-          label="스니펫"
-          active={view.kind === 'snippets'}
-          onClick={() => setView({ kind: 'snippets' })}
-        />
-        <NavItem
-          icon={<FolderSync size={16} />}
-          label="Git & Export"
-          active={view.kind === 'export'}
-          onClick={() => setView({ kind: 'export' })}
-        />
-        <NavItem
-          icon={<Settings size={16} />}
-          label="설정"
-          active={view.kind === 'settings'}
-          onClick={() => setView({ kind: 'settings' })}
         />
         <NavItem
           icon={<Star size={16} />}
@@ -301,18 +254,16 @@ export function Sidebar() {
       </div>
 
       {favorites.length > 0 && (
-        <div className="mt-4 px-2">
-          <div className="mb-1 px-2 text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
-            즐겨찾기
-          </div>
-          {favorites.map((p) => (
+        <div className="mt-3 px-2">
+          <SectionLabel>자주 쓰는 노트</SectionLabel>
+          {favorites.slice(0, 5).map((p) => (
             <button
               key={p.id}
               type="button"
               className={clsx(
-                'flex w-full items-center gap-2 truncate rounded-lg px-2 py-1.5 text-left text-sm',
+                'flex w-full items-center gap-2 truncate rounded-xl px-2 py-1.5 text-left text-[13px]',
                 view.kind === 'page' && view.pageId === p.id
-                  ? 'bg-[var(--color-hover)] font-medium'
+                  ? 'bg-[var(--color-accent-soft)] font-medium'
                   : 'hover:bg-[var(--color-hover)]',
               )}
               onClick={() => setView({ kind: 'page', pageId: p.id })}
@@ -324,57 +275,103 @@ export function Sidebar() {
         </div>
       )}
 
-      <div className="mt-4 flex items-center justify-between px-4">
-        <span className="text-xs font-medium uppercase tracking-wide text-[var(--color-muted)]">
-          비공개 페이지
-        </span>
+      <div className="mt-3 flex items-center justify-between px-3">
+        <SectionLabel className="!mb-0 !px-0">내 노트</SectionLabel>
         <div className="flex gap-0.5">
           <button
             type="button"
-            title="새 페이지"
-            className="rounded p-1 hover:bg-[var(--color-hover)]"
+            title="새 노트"
+            className="rounded-lg p-1.5 text-[var(--color-accent)] hover:bg-[var(--color-accent-soft)]"
             onClick={() => createPage({ type: 'page' })}
           >
-            <FileText size={14} />
+            <FileText size={15} />
           </button>
           <button
             type="button"
-            title="새 데이터베이스"
-            className="rounded p-1 hover:bg-[var(--color-hover)]"
+            title="새 표 (목록)"
+            className="rounded-lg p-1.5 text-[var(--color-muted)] hover:bg-[var(--color-hover)]"
             onClick={() => createPage({ type: 'database' })}
           >
-            <Database size={14} />
+            <Database size={15} />
           </button>
           <button
             type="button"
-            title="추가"
-            className="rounded p-1 hover:bg-[var(--color-hover)]"
+            title="새 노트"
+            className="rounded-lg bg-[var(--color-accent)] p-1.5 text-white hover:opacity-90"
             onClick={() => createPage()}
           >
-            <Plus size={14} />
+            <Plus size={15} />
           </button>
         </div>
       </div>
+      <p className="mb-1 px-4 text-[11px] text-[var(--color-muted)]">끌어다 놓으면 순서·폴더를 바꿀 수 있어요</p>
 
-      <div className="mt-1 flex-1 overflow-y-auto px-2 pb-3">{renderTree(roots)}</div>
+      <div className="mt-0.5 flex-1 overflow-y-auto px-2 pb-2">{renderTree(roots)}</div>
 
-      <div className="space-y-0.5 border-t border-[var(--color-border)] p-2">
-        <NavItem icon={<Download size={16} />} label="내보내기" onClick={downloadExport} />
-        <NavItem icon={<Upload size={16} />} label="가져오기" onClick={onImport} />
-        <NavItem
-          icon={theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-          label={theme === 'dark' ? '라이트 모드' : '다크 모드'}
-          onClick={toggleTheme}
-        />
-        <NavItem
-          icon={<RotateCcw size={16} />}
-          label="샘플로 초기화"
-          onClick={() => {
-            if (confirm('워크스페이스를 샘플 데이터로 초기화할까요?')) resetWorkspace()
-          }}
-        />
+      <div className="border-t border-[var(--color-border)] p-2">
+        <button
+          type="button"
+          className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left text-[13px] text-[var(--color-muted)] hover:bg-[var(--color-hover)]"
+          onClick={() => setMoreOpen((v) => !v)}
+        >
+          <HelpCircle size={15} />
+          <span className="flex-1">더 보기</span>
+          {moreOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </button>
+        {moreOpen && (
+          <div className="mt-0.5 space-y-0.5">
+            <NavItem
+              icon={<Network size={15} />}
+              label="연결 보기"
+              active={view.kind === 'graph'}
+              onClick={() => setView({ kind: 'graph' })}
+            />
+            <NavItem
+              icon={<Code2 size={15} />}
+              label="코드 모음"
+              active={view.kind === 'snippets'}
+              onClick={() => setView({ kind: 'snippets' })}
+            />
+            <NavItem
+              icon={<FolderOutput size={15} />}
+              label="내보내기 / 백업"
+              active={view.kind === 'export'}
+              onClick={() => setView({ kind: 'export' })}
+            />
+            <NavItem
+              icon={<Settings size={15} />}
+              label="설정"
+              active={view.kind === 'settings'}
+              onClick={() => setView({ kind: 'settings' })}
+            />
+            <NavItem
+              icon={theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+              label={theme === 'dark' ? '밝은 화면' : '어두운 화면'}
+              onClick={toggleTheme}
+            />
+          </div>
+        )}
       </div>
     </aside>
+  )
+}
+
+function SectionLabel({
+  children,
+  className,
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      className={clsx(
+        'mb-1 px-2 text-[11px] font-semibold tracking-wide text-[var(--color-muted)]',
+        className,
+      )}
+    >
+      {children}
+    </div>
   )
 }
 
@@ -383,26 +380,27 @@ function NavItem({
   label,
   onClick,
   active,
-  hint,
 }: {
   icon: React.ReactNode
   label: string
   onClick: () => void
   active?: boolean
-  hint?: string
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className={clsx(
-        'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm',
-        active ? 'bg-[var(--color-hover)] font-medium' : 'hover:bg-[var(--color-hover)]',
+        'flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left text-[13px]',
+        active
+          ? 'bg-[var(--color-accent-soft)] font-medium text-[var(--color-accent)]'
+          : 'hover:bg-[var(--color-hover)]',
       )}
     >
-      <span className="text-[var(--color-muted)]">{icon}</span>
+      <span className={active ? 'text-[var(--color-accent)]' : 'text-[var(--color-muted)]'}>
+        {icon}
+      </span>
       <span className="flex-1">{label}</span>
-      {hint && <span className="text-[10px] text-[var(--color-muted)]">{hint}</span>}
     </button>
   )
 }

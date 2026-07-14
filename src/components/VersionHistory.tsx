@@ -31,7 +31,7 @@ export function VersionHistory({ pageId }: Props) {
         onClick={() => setOpen((v) => !v)}
       >
         <History size={16} className="text-[var(--color-muted)]" />
-        <span className="font-medium">버전 히스토리</span>
+        <span className="font-medium">이전 저장본</span>
         <span className="text-[var(--color-muted)]">· {list.length}개</span>
         <span className="ml-auto text-xs text-[var(--color-muted)]">{open ? '접기' : '열기'}</span>
       </button>
@@ -41,7 +41,7 @@ export function VersionHistory({ pageId }: Props) {
           <div className="flex flex-wrap gap-2">
             <input
               className="min-w-[160px] flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] px-2 py-1.5 text-sm outline-none"
-              placeholder="스냅샷 라벨 (선택)"
+              placeholder="이름 (선택) 예: 제출 전"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
             />
@@ -53,11 +53,11 @@ export function VersionHistory({ pageId }: Props) {
                 setLabel('')
               }}
             >
-              <Camera size={14} /> 지금 스냅샷
+              <Camera size={14} /> 지금 저장
             </button>
           </div>
           <p className="text-xs text-[var(--color-muted)]">
-            편집 시 약 30초 간격으로 자동 스냅샷이 저장됩니다. (페이지당 최대 20개)
+            잘못 지웠을 때 되돌릴 수 있어요. 자동으로도 가끔 저장됩니다.
           </p>
 
           {list.length === 0 ? (

@@ -23,7 +23,7 @@ export function SearchView() {
         <input
           ref={inputRef}
           className="w-full border-none bg-transparent outline-none"
-          placeholder="제목 · 본문 · DB 행 검색 (랭킹)…"
+          placeholder="노트 이름이나 내용 검색…"
           value={query}
           onChange={(e) => setSearchQuery(e.target.value)}
         />

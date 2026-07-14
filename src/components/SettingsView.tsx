@@ -26,11 +26,11 @@ export function SettingsView() {
   return (
     <div className="fade-in mx-auto max-w-2xl px-6 py-10">
       <div className="mb-2 flex items-center gap-2 text-sm font-medium text-[var(--color-accent)]">
-        <Settings size={16} /> 로컬 설정
+        <Settings size={16} /> 설정
       </div>
       <h1 className="text-2xl font-bold">설정</h1>
-      <p className="mt-2 text-sm text-[var(--color-muted)]">
-        모든 데이터는 이 브라우저 IndexedDB에만 저장됩니다. 서버 전송 없음.
+      <p className="mt-2 text-sm leading-relaxed text-[var(--color-muted)]">
+        노트는 이 컴퓨터 브라우저 안에만 저장돼요. 다른 사람에게 자동으로 보내지 않아요.
       </p>
 
       <section className="mt-8 space-y-4">

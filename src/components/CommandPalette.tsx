@@ -372,7 +372,7 @@ export function CommandPalette({ open, onClose }: Props) {
           <input
             ref={inputRef}
             className="w-full border-none bg-transparent text-base outline-none"
-            placeholder="페이지, 템플릿, 액션 검색…"
+            placeholder="노트 찾기, 새 노트, 템플릿…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />

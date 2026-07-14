@@ -62,25 +62,24 @@ export function createSeedPages(): Page[] {
     updatedAt: now,
     cover: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     blocks: [
-      block('heading1', 'Noto에 오신 것을 환영합니다'),
+      block('heading1', 'Noto에 오신 걸 환영해요'),
       block(
         'paragraph',
-        '완전 무료 · 로컬 저장 · Notion 스타일 워크스페이스입니다. 데이터가 브라우저에만 저장되므로 로그인이나 구독이 필요 없습니다.',
+        '여기는 내 컴퓨터에만 저장되는 노트 앱이에요. 로그인이나 돈 내는 구독이 없어요.',
       ),
       block(
         'callout',
-        'v2.0 로컬 완성형: 트리 DnD · 관계/수식/캘린더 · 로컬 이미지 · 랭킹 검색 · 설정 · Undo · Git export',
+        '💡 빈 줄에 / 를 눌러 보세요. 제목, 목록, 할 일, 표를 고를 수 있어요.',
       ),
-      block('heading2', '시작하기'),
-      block('bullet', 'Ctrl+K 커맨드 팔레트 · Ctrl+Z 실행취소'),
-      block('bullet', '사이드바에서 페이지를 드래그해 순서/하위로 이동'),
-      block('bullet', '/표 /이미지 /api /git /mermaid'),
-      block('bullet', '[[단축키 & 마크다운]] 위키링크'),
+      block('heading2', '이것만 알면 충분해요'),
+      block('bullet', '왼쪽 + 버튼으로 새 노트 만들기'),
+      block('todo', '할 일처럼 체크해 보기', { checked: false }),
+      block('bullet', 'Ctrl+K 로 노트 빠르게 찾기'),
+      block('bullet', '노트를 끌어다 놓아 정리하기'),
+      block('paragraph', '더 자세한 안내는 [[단축키 & 마크다운]] 을 열어 보세요.'),
       block('divider', ''),
-      block('code', 'const note = { free: true, local: true, ai: false }\nconsole.log(note)', {
-        language: 'typescript',
-      }),
-      block('mermaid', 'flowchart LR\n  Write --> Structure\n  Structure --> Export\n  Export --> Git'),
+      block('heading2', '연습 공간'),
+      block('paragraph', '이 아래에 마음대로 적어 보세요!'),
     ],
   }
 

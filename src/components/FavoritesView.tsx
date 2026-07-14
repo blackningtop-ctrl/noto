@@ -9,11 +9,11 @@ export function FavoritesView() {
   return (
     <div className="fade-in mx-auto max-w-2xl px-6 py-12">
       <h1 className="mb-2 text-2xl font-bold">즐겨찾기</h1>
-      <p className="mb-6 text-sm text-[var(--color-muted)]">자주 여는 페이지를 모아 둡니다.</p>
+      <p className="mb-6 text-sm text-[var(--color-muted)]">자주 보는 노트를 모아 둔 곳이에요.</p>
 
       {pages.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[var(--color-border)] py-16 text-center text-sm text-[var(--color-muted)]">
-          아직 즐겨찾기가 없습니다. 페이지에서 ⭐ 를 눌러 추가하세요.
+          아직 없어요. 노트를 열고 ⭐ 를 눌러 추가해 보세요.
         </div>
       ) : (
         <div className="space-y-2">

@@ -47,11 +47,11 @@ export function ExportView() {
   return (
     <div className="fade-in mx-auto max-w-3xl px-6 py-10">
       <div className="mb-2 flex items-center gap-2 text-sm font-medium text-[var(--color-accent)]">
-        <GitBranch size={16} /> Phase 3 · Git / Export (AI 제외)
+        <GitBranch size={16} /> 백업 · 내보내기
       </div>
-      <h1 className="text-2xl font-bold">Git & 내보내기</h1>
-      <p className="mt-2 text-sm text-[var(--color-muted)]">
-        Markdown vault · 정적 사이트 · 로컬 폴더 동기화. 서버 없이 브라우저에서만 동작합니다.
+      <h1 className="text-2xl font-bold">내 노트 내보내기</h1>
+      <p className="mt-2 text-sm leading-relaxed text-[var(--color-muted)]">
+        컴퓨터를 바꾸거나 백업할 때 써요. 인터넷 서버로 보내지 않고, 내 컴퓨터 파일로만 저장됩니다.
       </p>
 
       {msg && (
@@ -70,25 +70,25 @@ export function ExportView() {
       <div className="mt-8 space-y-4">
         <Card
           icon={<FileArchive size={20} />}
-          title="Markdown Vault ZIP"
-          desc="docs/**/*.md + noto-manifest.json + .gitignore — Git에 바로 커밋 가능한 구조"
+          title="노트 묶음 파일 (ZIP)"
+          desc="노트를 폴더처럼 정리된 압축 파일로 받아요. 백업이나 Git에 올리기 좋아요."
         >
           <Btn
             disabled={busy}
             icon={<Download size={14} />}
-            label="Vault 내보내기"
+            label="묶음 받기"
             primary
             onClick={() =>
               run(async () => {
                 await exportMarkdownVault(allPages, snippets)
-                setMsg({ type: 'ok', text: 'Markdown vault ZIP을 다운로드했습니다.' })
+                setMsg({ type: 'ok', text: 'ZIP 파일을 받았습니다.' })
               })
             }
           />
           <Btn
             disabled={busy}
             icon={<Upload size={14} />}
-            label="Vault ZIP 가져오기"
+            label="묶음 가져오기"
             onClick={() =>
               run(async () => {
                 const input = document.createElement('input')
@@ -123,18 +123,18 @@ export function ExportView() {
 
         <Card
           icon={<Globe size={20} />}
-          title="정적 Docs 사이트"
-          desc="index.html + pages/*.html + styles.css — 호스팅 없이 압축 해제 후 브라우저로 열기"
+          title="웹페이지로 내보내기"
+          desc="인터넷 없이도 브라우저에서 볼 수 있는 홈페이지 형태로 받아요."
         >
           <Btn
             disabled={busy || pages.length === 0}
             icon={<Download size={14} />}
-            label="정적 사이트 ZIP"
+            label="웹페이지 ZIP 받기"
             primary
             onClick={() =>
               run(async () => {
                 await exportStaticSite(allPages)
-                setMsg({ type: 'ok', text: '정적 사이트 ZIP을 다운로드했습니다.' })
+                setMsg({ type: 'ok', text: '웹페이지 ZIP을 받았습니다.' })
               })
             }
           />
@@ -142,17 +142,17 @@ export function ExportView() {
 
         <Card
           icon={<FolderSync size={20} />}
-          title="로컬 폴더 동기화"
+          title="컴퓨터 폴더에 저장"
           desc={
             folderOk
-              ? 'Chrome/Edge File System Access API로 폴더에 직접 쓰거나 읽습니다.'
-              : '현재 브라우저는 폴더 API를 지원하지 않습니다. ZIP을 사용하거나 Chrome/Edge를 쓰세요.'
+              ? 'Chrome·Edge에서 폴더를 골라 바로 저장하거나 불러올 수 있어요.'
+              : '이 브라우저에서는 폴더 저장이 안 돼요. 위 ZIP을 쓰거나 Chrome/Edge를 이용해 주세요.'
           }
         >
           <Btn
             disabled={busy || !folderOk}
             icon={<FolderOpen size={14} />}
-            label="폴더로 내보내기"
+            label="폴더에 저장"
             primary
             onClick={() =>
               run(async () => {
@@ -164,7 +164,7 @@ export function ExportView() {
           <Btn
             disabled={busy || !folderOk}
             icon={<FolderInput size={14} />}
-            label="폴더에서 가져오기"
+            label="폴더에서 불러오기"
             onClick={() =>
               run(async () => {
                 const r = await syncImportFromFolder()
@@ -186,16 +186,13 @@ export function ExportView() {
         </Card>
 
         <div className="rounded-2xl border border-dashed border-[var(--color-border)] p-4 text-sm text-[var(--color-muted)]">
-          <p className="font-medium text-[var(--color-text)]">Git 워크플로 예시</p>
-          <ol className="mt-2 list-decimal space-y-1 pl-5">
-            <li>Vault 내보내기 또는 폴더 내보내기</li>
-            <li>
-              <code className="rounded bg-[var(--color-hover)] px-1">git init && git add docs noto-manifest.json</code>
-            </li>
-            <li>PR 리뷰용 문서는 페이지에 <code className="rounded bg-[var(--color-hover)] px-1">/git</code> 블록 추가</li>
-            <li>정적 사이트 ZIP으로 내부 위키 공유</li>
-          </ol>
-          <p className="mt-3">활성 페이지 {pages.length}개 · 스니펫 {snippets.length}개</p>
+          <p className="font-medium text-[var(--color-text)]">언제 쓰면 좋을까?</p>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            <li>시험 끝나고 노트를 파일로 모아 두고 싶을 때 → 묶음 받기</li>
+            <li>친구에게 인터넷 없이 보여 주고 싶을 때 → 웹페이지 ZIP</li>
+            <li>평소 백업 → 설정에서도 JSON 백업 가능</li>
+          </ul>
+          <p className="mt-3">지금 노트 {pages.length}개 · 코드 모음 {snippets.length}개</p>
         </div>
       </div>
     </div>

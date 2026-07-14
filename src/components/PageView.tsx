@@ -62,19 +62,19 @@ export function PageView({ pageId }: Props) {
               })
             }
           >
-            커버 변경
+            배경 바꾸기
           </button>
         </div>
       )}
 
-      <div className={clsx('mx-auto max-w-3xl px-4', page.cover ? '-mt-8' : 'pt-12')}>
-        <div className="mb-2 flex items-start justify-between gap-2">
+      <div className={clsx('mx-auto max-w-2xl px-5 md:px-6', page.cover ? '-mt-8' : 'pt-10 md:pt-14')}>
+        <div className="mb-1 flex items-start justify-between gap-2">
           <div className="relative">
             <button
               type="button"
               className="text-5xl leading-none transition hover:opacity-80"
               onClick={() => setIconOpen((v) => !v)}
-              title="아이콘 변경"
+              title="아이콘 바꾸기"
             >
               {page.icon}
             </button>
@@ -104,7 +104,7 @@ export function PageView({ pageId }: Props) {
                 className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs text-[var(--color-muted)] hover:bg-[var(--color-hover)]"
                 onClick={() => updatePage(page.id, { cover: COVERS[0] })}
               >
-                <ImageIcon size={14} /> 커버 추가
+                <ImageIcon size={14} /> 배경
               </button>
             )}
             <button
@@ -138,7 +138,7 @@ export function PageView({ pageId }: Props) {
                     setMenuOpen(false)
                   }}
                 >
-                  <Copy size={14} /> 복제
+                  <Copy size={14} /> 복사하기
                 </button>
                 <button
                   type="button"
@@ -155,7 +155,7 @@ export function PageView({ pageId }: Props) {
                     setMenuOpen(false)
                   }}
                 >
-                  <FileCode2 size={14} /> Markdown 내보내기
+                  <FileCode2 size={14} /> 파일로 저장
                 </button>
                 <button
                   type="button"
@@ -165,7 +165,7 @@ export function PageView({ pageId }: Props) {
                     setMenuOpen(false)
                   }}
                 >
-                  <Trash2 size={14} /> 휴지통
+                  <Trash2 size={14} /> 삭제
                 </button>
               </div>
             )}

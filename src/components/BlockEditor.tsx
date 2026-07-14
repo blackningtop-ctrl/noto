@@ -308,14 +308,18 @@ export function BlockEditor({ pageId, blocks }: Props) {
                   value={block.content}
                   placeholder={
                     index === 0 && !block.content
-                      ? "입력 · '/' 명령 · [[위키링크]] …"
+                      ? "여기에 적어 보세요. '/' 를 누르면 메뉴가 열려요"
                       : block.type === 'heading1'
-                        ? '제목 1'
+                        ? '큰 제목'
                         : block.type === 'heading2'
-                          ? '제목 2'
+                          ? '중간 제목'
                           : block.type === 'heading3'
-                            ? '제목 3'
-                            : ''
+                            ? '작은 제목'
+                            : block.type === 'todo'
+                              ? '할 일'
+                              : block.type === 'bullet'
+                                ? '목록'
+                                : ''
                   }
                   onChange={(value) => {
                     onChange(block, value)

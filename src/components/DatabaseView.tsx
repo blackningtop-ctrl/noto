@@ -113,7 +113,7 @@ export function DatabaseView({ page }: Props) {
           className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white"
           onClick={() => addDbRow(page.id)}
         >
-          <Plus size={14} /> 새 행
+          <Plus size={14} /> 새 항목
         </button>
       </div>
 

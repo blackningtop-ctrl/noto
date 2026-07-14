@@ -12,14 +12,14 @@ export function TrashView() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">휴지통</h1>
-          <p className="mt-1 text-sm text-[var(--color-muted)]">삭제된 페이지를 복원하거나 영구 삭제합니다.</p>
+          <p className="mt-1 text-sm text-[var(--color-muted)]">지운 노트를 되돌리거나 완전히 지울 수 있어요.</p>
         </div>
         {pages.length > 0 && (
           <button
             type="button"
             className="rounded-lg px-3 py-1.5 text-sm text-[var(--color-danger)] hover:bg-[var(--color-hover)]"
             onClick={() => {
-              if (confirm('휴지통을 비울까요? 이 작업은 되돌릴 수 없습니다.')) emptyTrash()
+              if (confirm('휴지통을 모두 비울까요? 되돌릴 수 없어요.')) emptyTrash()
             }}
           >
             모두 비우기
@@ -29,7 +29,7 @@ export function TrashView() {
 
       {pages.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[var(--color-border)] py-16 text-center text-sm text-[var(--color-muted)]">
-          휴지통이 비어 있습니다.
+          휴지통이 비어 있어요.
         </div>
       ) : (
         <div className="space-y-2">
