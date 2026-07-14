@@ -5,6 +5,7 @@ import { DatabaseView } from './DatabaseView'
 import { Backlinks } from './Backlinks'
 import { VersionHistory } from './VersionHistory'
 import { AiPanel } from './AiPanel'
+import { SelectionAiBubble } from './SelectionAiBubble'
 import { pageToMarkdown } from '../lib/markdown'
 import { PAGE_ICONS } from '../types'
 import { hasXaiApiKey } from '../lib/ai-key'
@@ -224,6 +225,7 @@ export function PageView({ pageId }: Props) {
         </div>
       )}
 
+      <SelectionAiBubble pageId={page.id} onOpenAi={() => setAiOpen(true)} />
       <AiPanel page={page} open={aiOpen} onClose={() => setAiOpen(false)} />
     </div>
   )

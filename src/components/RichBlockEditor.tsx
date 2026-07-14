@@ -7,6 +7,7 @@ import { WikiLink } from '../lib/tiptap-wiki'
 import { plainToHtml, stripHtml, isProbablyHtml } from '../lib/html-text'
 import { useStore, useActivePages } from '../store'
 import { findPageByWikiTitle } from '../lib/wiki'
+import { useSelectionStore } from '../lib/selection-store'
 import { EditorToolbar } from './EditorToolbar'
 import type { BlockType } from '../types'
 import clsx from 'clsx'
@@ -42,6 +43,7 @@ interface Props {
   onCloseSlash?: () => void
   onFocusEditor?: (editor: Editor) => void
   className?: string
+  pageId?: string
 }
 
 export function RichBlockEditor({
@@ -56,10 +58,12 @@ export function RichBlockEditor({
   onCloseSlash,
   onFocusEditor,
   className,
+  pageId,
 }: Props) {
   const pages = useActivePages()
   const setView = useStore((s) => s.setView)
   const createPage = useStore((s) => s.createPage)
+  const setSelection = useSelectionStore((s) => s.setSelection)
 
   const initial = useMemo(() => {
     if (!content) return ''
@@ -145,8 +149,47 @@ export function RichBlockEditor({
       onFocus: ({ editor: ed }) => {
         onFocusEditor?.(ed)
       },
+      onSelectionUpdate: ({ editor: ed }) => {
+        const { from, to, empty } = ed.state.selection
+        if (empty || from === to) {
+          // don't clear if user clicked bubble — only clear when truly empty
+          return
+        }
+        const text = ed.state.doc.textBetween(from, to, ' ')
+        if (!text.trim()) return
+        const domSel = window.getSelection()
+        let rect: { top: number; left: number; width: number; height: number } | null = null
+        if (domSel && domSel.rangeCount > 0) {
+          const r = domSel.getRangeAt(0).getBoundingClientRect()
+          if (r.width || r.height) {
+            rect = { top: r.top, left: r.left, width: r.width, height: r.height }
+          }
+        }
+        setSelection({
+          text: text.trim(),
+          rect,
+          blockId,
+          pageId: pageId ?? null,
+        })
+      },
+      onBlur: () => {
+        // delay clear so bubble click works
+        window.setTimeout(() => {
+          const active = document.activeElement
+          if (active?.closest?.('.selection-ai-bubble') || active?.closest?.('[class*="AiPanel"]')) {
+            return
+          }
+          // keep selection text for AI panel; only clear rect so bubble hides
+          setSelection({
+            text: useSelectionStore.getState().text,
+            rect: null,
+            blockId,
+            pageId: pageId ?? null,
+          })
+        }, 150)
+      },
     },
-    [blockId],
+    [blockId, pageId],
   )
 
   // external content sync (e.g. type change cleared content)

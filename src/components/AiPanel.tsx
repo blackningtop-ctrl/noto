@@ -1,18 +1,31 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Page } from '../types'
 import { useStore } from '../store'
 import { pageToMarkdown } from '../lib/markdown'
+import { stripHtml } from '../lib/html-text'
 import { hasXaiApiKey } from '../lib/ai-key'
+import { useSelectionStore } from '../lib/selection-store'
 import {
   AI_ACTIONS,
   AI_MODELS,
   type AiActionId,
   type ChatMessage,
-  runAiAction,
-  runAiChat,
+  runAiActionStream,
+  runAiChatStream,
   DEFAULT_AI_MODEL,
 } from '../lib/xai'
-import { Sparkles, X, Loader2, ArrowDownToLine, Send, Settings, KeyRound } from 'lucide-react'
+import {
+  Sparkles,
+  X,
+  Loader2,
+  ArrowDownToLine,
+  Send,
+  Settings,
+  KeyRound,
+  Square,
+  MousePointer2,
+  FileText,
+} from 'lucide-react'
 import clsx from 'clsx'
 
 interface Props {
@@ -28,40 +41,94 @@ export function AiPanel({ page, open, onClose }: Props) {
   const setBlocks = useStore((s) => s.setBlocks)
   const updatePage = useStore((s) => s.updatePage)
 
+  const selectionText = useSelectionStore((s) => s.text)
+  const pendingAiOpen = useSelectionStore((s) => s.pendingAiOpen)
+  const consumeAiOpen = useSelectionStore((s) => s.consumeAiOpen)
+
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState('')
   const [lastAction, setLastAction] = useState<AiActionId | null>(null)
   const [chatInput, setChatInput] = useState('')
   const [chat, setChat] = useState<ChatMessage[]>([])
+  const [scope, setScope] = useState<'page' | 'selection'>('page')
+  const abortRef = useRef<AbortController | null>(null)
+
   const keyed = hasXaiApiKey()
   const model = settings.aiModel || DEFAULT_AI_MODEL
+  const hasSelection = selectionText.trim().length >= 2
 
-  const bodyText = useMemo(() => {
+  const pageBody = useMemo(() => {
     if (page.type === 'database') return pageToMarkdown(page)
     return page.blocks
-      .map((b) => b.content)
+      .map((b) => stripHtml(b.content || ''))
       .filter(Boolean)
       .join('\n')
   }, [page])
 
+  const activeBody = scope === 'selection' && hasSelection ? selectionText.trim() : pageBody
+
+  useEffect(() => {
+    if (open && pendingAiOpen) {
+      consumeAiOpen()
+      if (hasSelection) setScope('selection')
+    }
+  }, [open, pendingAiOpen, hasSelection, consumeAiOpen])
+
+  useEffect(() => {
+    if (hasSelection && open) {
+      // keep selection mode sticky while selection exists
+    } else if (!hasSelection && scope === 'selection') {
+      setScope('page')
+    }
+  }, [hasSelection, open, scope])
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort()
+    }
+  }, [])
+
   if (!open) return null
+
+  const stop = () => {
+    abortRef.current?.abort()
+    abortRef.current = null
+    setBusy(false)
+  }
 
   const run = async (action: AiActionId) => {
     if (!keyed) {
       setError('먼저 설정에서 API 키를 입력해 주세요.')
       return
     }
+    if (scope === 'selection' && !hasSelection) {
+      setError('글을 드래그해서 선택한 뒤 다시 눌러 주세요.')
+      return
+    }
+    abortRef.current?.abort()
+    const ac = new AbortController()
+    abortRef.current = ac
     setBusy(true)
     setError(null)
     setLastAction(action)
+    setResult('')
     try {
-      const text = await runAiAction(action, page.title, bodyText, model)
-      setResult(text)
+      await runAiActionStream(action, page.title, activeBody, {
+        model,
+        scope,
+        signal: ac.signal,
+        onDelta: (_chunk, full) => setResult(full),
+      })
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'AI 요청 실패')
+      if ((e as Error).name === 'AbortError') {
+        setError(null)
+      } else {
+        setError(e instanceof Error ? e.message : 'AI 요청 실패')
+      }
     } finally {
       setBusy(false)
+      abortRef.current = null
     }
   }
 
@@ -72,33 +139,44 @@ export function AiPanel({ page, open, onClose }: Props) {
       setError('먼저 설정에서 API 키를 입력해 주세요.')
       return
     }
+    abortRef.current?.abort()
+    const ac = new AbortController()
+    abortRef.current = ac
     setBusy(true)
     setError(null)
     setChatInput('')
     const nextHistory = [...chat, { role: 'user' as const, content: msg }]
     setChat(nextHistory)
+    setResult('')
+    setLastAction(null)
     try {
-      const reply = await runAiChat(
-        chat,
-        msg,
-        `제목: ${page.title}\n\n${bodyText}`,
+      const ctx =
+        scope === 'selection' && hasSelection
+          ? `제목: ${page.title}\n\n[선택 영역]\n${selectionText}\n\n[전체 노트 일부]\n${pageBody.slice(0, 4000)}`
+          : `제목: ${page.title}\n\n${pageBody}`
+      const reply = await runAiChatStream(chat, msg, ctx, {
         model,
-      )
+        signal: ac.signal,
+        onDelta: (_c, full) => {
+          setResult(full)
+        },
+      })
       setChat([...nextHistory, { role: 'assistant', content: reply }])
       setResult(reply)
-      setLastAction(null)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'AI 요청 실패')
-      setChat(chat)
+      if ((e as Error).name !== 'AbortError') {
+        setError(e instanceof Error ? e.message : 'AI 요청 실패')
+        setChat(chat)
+      }
     } finally {
       setBusy(false)
+      abortRef.current = null
     }
   }
 
   const applyBelow = () => {
     if (!result.trim() || page.type !== 'page') return
     const lines = result.split(/\n/)
-    // append as paragraphs / todos
     const extras = lines
       .map((line) => line.trimEnd())
       .filter((line, i, arr) => line.length > 0 || (i > 0 && arr[i - 1].length > 0))
@@ -127,20 +205,23 @@ export function AiPanel({ page, open, onClose }: Props) {
         return { id: crypto.randomUUID(), type: 'paragraph' as const, content: line }
       })
 
-    if (page.blocks.length === 1 && !page.blocks[0].content) {
+    if (page.blocks.length === 1 && !stripHtml(page.blocks[0].content || '')) {
       setBlocks(page.id, extras.length ? extras : [{ id: crypto.randomUUID(), type: 'paragraph', content: result }])
     } else {
       setBlocks(page.id, [
         ...page.blocks,
         { id: crypto.randomUUID(), type: 'divider', content: '' },
-        { id: crypto.randomUUID(), type: 'callout', content: '🤖 AI 결과' },
+        {
+          id: crypto.randomUUID(),
+          type: 'callout',
+          content: scope === 'selection' ? '🤖 AI 결과 (선택 영역)' : '🤖 AI 결과',
+        },
         ...extras,
       ])
     }
   }
 
   const applyTitle = () => {
-    // take first non-empty line, strip number prefix
     const line =
       result
         .split('\n')
@@ -149,16 +230,29 @@ export function AiPanel({ page, open, onClose }: Props) {
     if (line) updatePage(page.id, { title: line.slice(0, 120) })
   }
 
+  const actions =
+    scope === 'selection'
+      ? AI_ACTIONS.filter((a) => a.selectionFriendly !== false && a.id !== 'title')
+      : AI_ACTIONS
+
   return (
-    <div className="fixed bottom-4 right-4 z-40 flex w-[min(400px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-panel)] shadow-2xl">
+    <div className="fixed bottom-4 right-4 z-40 flex w-[min(420px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-panel)] shadow-2xl">
       <div className="flex items-center gap-2 border-b border-[var(--color-border)] bg-[var(--color-hover)] px-3 py-2.5">
         <Sparkles size={16} className="text-[var(--color-accent)]" />
         <span className="flex-1 text-sm font-semibold">AI 도우미</span>
+        {busy && (
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-danger)]/10 px-2 py-1 text-[11px] font-medium text-[var(--color-danger)]"
+            onClick={stop}
+          >
+            <Square size={12} /> 중지
+          </button>
+        )}
         <select
-          className="max-w-[140px] rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] px-1.5 py-1 text-[11px] outline-none"
+          className="max-w-[130px] rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] px-1.5 py-1 text-[11px] outline-none"
           value={model}
           onChange={(e) => updateSettings({ aiModel: e.target.value })}
-          title="모델"
         >
           {AI_MODELS.map((m) => (
             <option key={m.id} value={m.id}>
@@ -178,8 +272,7 @@ export function AiPanel({ page, open, onClose }: Props) {
             <div>
               <p className="font-medium">API 키가 필요해요</p>
               <p className="mt-1 text-xs leading-relaxed text-[var(--color-muted)]">
-                SpaceXAI(xAI) 키를 설정에 넣으면 요약·이어쓰기·번역 등을 쓸 수 있어요. 키는 이
-                브라우저에만 저장되고, 요청 시에만 api.x.ai 로 전송됩니다.
+                SpaceXAI(xAI) 키를 설정에 넣으면 요약·선택 영역 AI·스트리밍 채팅을 쓸 수 있어요.
               </p>
             </div>
           </div>
@@ -196,8 +289,55 @@ export function AiPanel({ page, open, onClose }: Props) {
         </div>
       ) : (
         <>
+          {/* scope toggle */}
+          <div className="flex gap-1 border-b border-[var(--color-border)] p-2">
+            <button
+              type="button"
+              onClick={() => setScope('page')}
+              className={clsx(
+                'flex flex-1 items-center justify-center gap-1 rounded-xl px-2 py-1.5 text-xs font-medium',
+                scope === 'page'
+                  ? 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
+                  : 'text-[var(--color-muted)] hover:bg-[var(--color-hover)]',
+              )}
+            >
+              <FileText size={13} /> 전체 노트
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!hasSelection) {
+                  setError('노트에서 글을 드래그해서 선택한 뒤 눌러 주세요.')
+                  return
+                }
+                setScope('selection')
+                setError(null)
+              }}
+              className={clsx(
+                'flex flex-1 items-center justify-center gap-1 rounded-xl px-2 py-1.5 text-xs font-medium',
+                scope === 'selection'
+                  ? 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
+                  : 'text-[var(--color-muted)] hover:bg-[var(--color-hover)]',
+              )}
+            >
+              <MousePointer2 size={13} /> 선택한 글
+              {hasSelection && (
+                <span className="rounded bg-[var(--color-panel)] px-1 text-[10px]">
+                  {selectionText.trim().length}자
+                </span>
+              )}
+            </button>
+          </div>
+
+          {scope === 'selection' && hasSelection && (
+            <div className="mx-2 mt-2 max-h-16 overflow-y-auto rounded-lg bg-[var(--color-hover)] px-2 py-1.5 text-[11px] text-[var(--color-muted)]">
+              “{selectionText.trim().slice(0, 160)}
+              {selectionText.trim().length > 160 ? '…' : ''}”
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-1.5 p-2">
-            {AI_ACTIONS.map((a) => (
+            {actions.map((a) => (
               <button
                 key={a.id}
                 type="button"
@@ -223,16 +363,19 @@ export function AiPanel({ page, open, onClose }: Props) {
             </div>
           )}
 
-          <div className="mx-2 mb-2 max-h-48 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-hover)]/40 p-2">
+          <div className="mx-2 mb-2 max-h-52 overflow-y-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-hover)]/40 p-2">
             {busy && !result ? (
               <div className="flex items-center gap-2 px-1 py-6 text-sm text-[var(--color-muted)]">
-                <Loader2 size={16} className="animate-spin" /> 생각 중…
+                <Loader2 size={16} className="animate-spin" /> 실시간으로 받아오는 중…
               </div>
             ) : result ? (
-              <pre className="whitespace-pre-wrap font-sans text-xs leading-relaxed">{result}</pre>
+              <pre className="whitespace-pre-wrap font-sans text-xs leading-relaxed">
+                {result}
+                {busy && <span className="ml-0.5 inline-block h-3 w-1.5 animate-pulse bg-[var(--color-accent)] align-middle" />}
+              </pre>
             ) : (
               <p className="px-1 py-6 text-center text-xs text-[var(--color-muted)]">
-                위 버튼을 누르거나 아래에 질문해 보세요
+                버튼을 누르거나 아래에 질문해 보세요 · 답변이 실시간으로 나타나요
               </p>
             )}
           </div>
@@ -243,6 +386,7 @@ export function AiPanel({ page, open, onClose }: Props) {
                 type="button"
                 className="inline-flex flex-1 items-center justify-center gap-1 rounded-xl bg-[var(--color-accent)] px-2 py-2 text-xs font-medium text-white"
                 onClick={applyBelow}
+                disabled={busy}
               >
                 <ArrowDownToLine size={14} /> 노트 아래에 넣기
               </button>
@@ -251,6 +395,7 @@ export function AiPanel({ page, open, onClose }: Props) {
                   type="button"
                   className="rounded-xl border border-[var(--color-border)] px-2 py-2 text-xs"
                   onClick={applyTitle}
+                  disabled={busy}
                 >
                   제목 적용
                 </button>
@@ -259,6 +404,7 @@ export function AiPanel({ page, open, onClose }: Props) {
                 type="button"
                 className="rounded-xl border border-[var(--color-border)] px-2 py-2 text-xs"
                 onClick={() => void navigator.clipboard.writeText(result)}
+                disabled={busy}
               >
                 복사
               </button>
@@ -286,7 +432,11 @@ export function AiPanel({ page, open, onClose }: Props) {
           <div className="flex gap-1.5 border-t border-[var(--color-border)] p-2">
             <input
               className="min-w-0 flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
-              placeholder="AI에게 물어보기…"
+              placeholder={
+                scope === 'selection' && hasSelection
+                  ? '선택 영역에 대해 물어보기…'
+                  : 'AI에게 물어보기…'
+              }
               value={chatInput}
               disabled={busy}
               onChange={(e) => setChatInput(e.target.value)}

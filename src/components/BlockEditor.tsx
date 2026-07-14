@@ -20,6 +20,8 @@ interface Props {
   blocks: Block[]
 }
 
+// pageId used for selection AI
+
 const MARKDOWN_MAP: { re: RegExp; type: BlockType }[] = [
   { re: /^###\s/, type: 'heading3' },
   { re: /^##\s/, type: 'heading2' },
@@ -286,6 +288,7 @@ export function BlockEditor({ pageId, blocks }: Props) {
                   <RichBlockEditor
                     blockId={block.id}
                     blockType={block.type}
+                    pageId={pageId}
                     content={block.content}
                     className={clsx(
                       classFor(block.type),
