@@ -1,0 +1,9 @@
+
+> noto@2.3.0 dev
+> vite --host 0.0.0.0 --port 5173
+
+
+  VITE v8.1.4  ready in 329 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://192.168.40.91:5173/
