@@ -17,9 +17,15 @@
 | **스니펫** | 보일러플레이트 라이브러리 · 페이지 삽입 · Ctrl+K |
 | **API 블록** | Method · Path · Request/Response · cURL 복사 (`/api`) |
 | **버전 히스토리** | 자동(30s) · 수동 스냅샷 · 복원 (페이지당 20개) |
+| **Markdown Vault** | `docs/**/*.md` + `noto-manifest.json` ZIP (Git 친화) |
+| **정적 Docs 사이트** | `index.html` + `pages/*.html` ZIP (오프라인 위키) |
+| **폴더 동기화** | Chrome/Edge File System Access API 읽기/쓰기 |
+| **Git 메타 블록** | `/git` — repo · branch · PR · issue · commit 링크 |
 | **블록 에디터** | H1–H3, 목록, 할 일, 인용, 콜아웃, 구분선, 이미지, 토글 |
 | **데이터베이스** | 테이블 · 칸반 · 갤러리 |
 | **휴지통 · 테마 · JSON 백업** | 로컬 only |
+
+> AI 기능은 포함하지 않습니다.
 
 데이터가 **localStorage**에만 저장됩니다.
 

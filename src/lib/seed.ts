@@ -62,7 +62,7 @@ export function createSeedPages(): Page[] {
     blocks: [
       block('heading1', 'Noto에 오신 것을 환영합니다'),
       block('paragraph', '완전 무료 · 로컬 저장 · Notion 스타일 워크스페이스입니다. 데이터가 브라우저에만 저장되므로 로그인이나 구독이 필요 없습니다.'),
-      block('callout', '💡 Dev Phase 2: 그래프 · 스니펫 · /api 엔드포인트 · 버전 히스토리 (+ Phase 1 전부)'),
+      block('callout', '💡 Dev Phase 3: Git vault · 정적 docs · 폴더 동기화 · /git 블록 (AI 제외)'),
       block('heading2', '주요 기능'),
       block('todo', '페이지 · 하위 페이지 만들기', { checked: true }),
       block('todo', '블록 에디터 (제목, 리스트, 코드, 인용 등)', { checked: true }),

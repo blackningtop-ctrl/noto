@@ -16,6 +16,7 @@ import {
   ChevronRight,
   GitBranch,
   Globe,
+  GitBranch as GitIcon,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -41,6 +42,7 @@ export const SLASH_ITEMS: SlashItem[] = [
   { type: 'code', label: '코드', description: '하이라이트 · 복사 · 언어', keywords: 'code 코드 highlight', icon: <Code2 size={18} /> },
   { type: 'mermaid', label: 'Mermaid', description: '다이어그램', keywords: 'mermaid diagram 시퀀스 플로우', icon: <GitBranch size={18} /> },
   { type: 'api', label: 'API 엔드포인트', description: 'Method · Path · Request/Response', keywords: 'api endpoint rest http', icon: <Globe size={18} /> },
+  { type: 'git', label: 'Git 메타', description: 'repo · branch · PR · issue', keywords: 'git github pr issue commit', icon: <GitIcon size={18} /> },
   { type: 'divider', label: '구분선', description: '시각적 구분', keywords: 'divider 구분선 hr', icon: <Minus size={18} /> },
   { type: 'image', label: '이미지', description: '이미지 URL', keywords: 'image 이미지', icon: <ImageIcon size={18} /> },
 ]

@@ -68,6 +68,23 @@ export function blocksToMarkdown(blocks: Block[]): string {
           lines.push(b.content)
         }
         break
+      case 'git':
+        if (b.git) {
+          lines.push(
+            [
+              `> **Git** \`${b.git.provider}\` · \`${b.git.repo}\` @ \`${b.git.branch || 'main'}\``,
+              b.git.pr ? `> PR/MR: #${b.git.pr}` : '',
+              b.git.issue ? `> Issue: #${b.git.issue}` : '',
+              b.git.commit ? `> Commit: \`${b.git.commit}\`` : '',
+              b.git.note ? `> ${b.git.note}` : '',
+            ]
+              .filter(Boolean)
+              .join('\n'),
+          )
+        } else {
+          lines.push(b.content)
+        }
+        break
       case 'divider':
         lines.push('---')
         break

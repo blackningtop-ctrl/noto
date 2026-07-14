@@ -10,6 +10,7 @@ export type BlockType =
   | 'code'
   | 'mermaid'
   | 'api'
+  | 'git'
   | 'divider'
   | 'callout'
   | 'image'
@@ -27,6 +28,18 @@ export interface ApiEndpoint {
   contentType: string
 }
 
+export type GitProvider = 'github' | 'gitlab' | 'bitbucket' | 'other'
+
+export interface GitMeta {
+  provider: GitProvider
+  repo: string
+  branch: string
+  pr: string
+  issue: string
+  commit: string
+  note: string
+}
+
 export interface Block {
   id: string
   type: BlockType
@@ -36,6 +49,7 @@ export interface Block {
   open?: boolean
   children?: Block[]
   api?: ApiEndpoint
+  git?: GitMeta
 }
 
 export type PropertyType = 'text' | 'number' | 'select' | 'multi_select' | 'date' | 'checkbox' | 'url' | 'status'
@@ -125,6 +139,7 @@ export type View =
   | { kind: 'search' }
   | { kind: 'graph' }
   | { kind: 'snippets' }
+  | { kind: 'export' }
 
 export const SELECT_COLORS = [
   '#ef4444',
@@ -155,5 +170,56 @@ export function defaultApiEndpoint(): ApiEndpoint {
     responseBody: '{\n  "ok": true\n}',
     statusCode: 200,
     contentType: 'application/json',
+  }
+}
+
+export function defaultGitMeta(): GitMeta {
+  return {
+    provider: 'github',
+    repo: 'owner/repo',
+    branch: 'main',
+    pr: '',
+    issue: '',
+    commit: '',
+    note: '',
+  }
+}
+
+export function gitMetaUrls(git: GitMeta): {
+  repoUrl: string
+  branchUrl: string
+  prUrl: string | null
+  issueUrl: string | null
+  commitUrl: string | null
+} {
+  const repo = git.repo.replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '')
+  if (git.provider === 'github' || git.provider === 'other') {
+    const base = `https://github.com/${repo}`
+    return {
+      repoUrl: base,
+      branchUrl: `${base}/tree/${encodeURIComponent(git.branch || 'main')}`,
+      prUrl: git.pr ? `${base}/pull/${git.pr}` : null,
+      issueUrl: git.issue ? `${base}/issues/${git.issue}` : null,
+      commitUrl: git.commit ? `${base}/commit/${git.commit}` : null,
+    }
+  }
+  if (git.provider === 'gitlab') {
+    const base = `https://gitlab.com/${repo}`
+    return {
+      repoUrl: base,
+      branchUrl: `${base}/-/tree/${encodeURIComponent(git.branch || 'main')}`,
+      prUrl: git.pr ? `${base}/-/merge_requests/${git.pr}` : null,
+      issueUrl: git.issue ? `${base}/-/issues/${git.issue}` : null,
+      commitUrl: git.commit ? `${base}/-/commit/${git.commit}` : null,
+    }
+  }
+  // bitbucket
+  const base = `https://bitbucket.org/${repo}`
+  return {
+    repoUrl: base,
+    branchUrl: `${base}/src/${encodeURIComponent(git.branch || 'main')}`,
+    prUrl: git.pr ? `${base}/pull-requests/${git.pr}` : null,
+    issueUrl: git.issue ? `${base}/issues/${git.issue}` : null,
+    commitUrl: git.commit ? `${base}/commits/${git.commit}` : null,
   }
 }

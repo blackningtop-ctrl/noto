@@ -18,7 +18,11 @@ import {
   Network,
   Code2,
   Camera,
+  FolderSync,
+  FileArchive,
+  Globe,
 } from 'lucide-react'
+import { exportMarkdownVault, exportStaticSite } from '../lib/export-vault'
 import clsx from 'clsx'
 
 interface Item {
@@ -100,6 +104,13 @@ export function CommandPalette({ open, onClose }: Props) {
         label: '스니펫 라이브러리',
         icon: <Code2 size={16} />,
         run: () => setView({ kind: 'snippets' }),
+      },
+      {
+        id: 'export-hub',
+        group: '이동',
+        label: 'Git & Export',
+        icon: <FolderSync size={16} />,
+        run: () => setView({ kind: 'export' }),
       },
       {
         id: 'snapshot',
@@ -209,6 +220,24 @@ export function CommandPalette({ open, onClose }: Props) {
             useStore.getState().setBlocks(id, markdownToBlocks(text))
           }
           input.click()
+        },
+      },
+      {
+        id: 'export-vault',
+        group: '내보내기',
+        label: 'Markdown Vault ZIP (Git용)',
+        icon: <FileArchive size={16} />,
+        run: () => {
+          void exportMarkdownVault(allPages, useStore.getState().snippets)
+        },
+      },
+      {
+        id: 'export-static',
+        group: '내보내기',
+        label: '정적 Docs 사이트 ZIP',
+        icon: <Globe size={16} />,
+        run: () => {
+          void exportStaticSite(allPages)
         },
       },
     )

@@ -22,6 +22,7 @@ import {
   RotateCcw,
   Network,
   Code2,
+  FolderSync,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -236,6 +237,12 @@ export function Sidebar() {
           label="스니펫"
           active={view.kind === 'snippets'}
           onClick={() => setView({ kind: 'snippets' })}
+        />
+        <NavItem
+          icon={<FolderSync size={16} />}
+          label="Git & Export"
+          active={view.kind === 'export'}
+          onClick={() => setView({ kind: 'export' })}
         />
         <NavItem
           icon={<Star size={16} />}

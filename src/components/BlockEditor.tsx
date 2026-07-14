@@ -5,8 +5,9 @@ import { SlashMenu } from './SlashMenu'
 import { CodeBlock } from './CodeBlock'
 import { MermaidBlock } from './MermaidBlock'
 import { ApiBlock } from './ApiBlock'
+import { GitBlock } from './GitBlock'
 import { WikiText } from './WikiText'
-import { defaultApiEndpoint } from '../types'
+import { defaultApiEndpoint, defaultGitMeta } from '../types'
 import { GripVertical, Plus, Trash2 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -100,7 +101,11 @@ export function BlockEditor({ pageId, blocks }: Props) {
   const onKeyDown = (e: React.KeyboardEvent, block: Block, index: number) => {
     if (slash) return
 
-    const isCodeLike = block.type === 'code' || block.type === 'mermaid' || block.type === 'api'
+    const isCodeLike =
+      block.type === 'code' ||
+      block.type === 'mermaid' ||
+      block.type === 'api' ||
+      block.type === 'git'
     if (e.key === 'Enter' && !e.shiftKey && !isCodeLike) {
       e.preventDefault()
       const id = addBlock(pageId, block.id, 'paragraph')
@@ -142,6 +147,8 @@ export function BlockEditor({ pageId, blocks }: Props) {
       updateBlock(pageId, slash.blockId, { content: '', language: 'typescript' })
     } else if (type === 'api') {
       updateBlock(pageId, slash.blockId, { content: 'API', api: defaultApiEndpoint() })
+    } else if (type === 'git') {
+      updateBlock(pageId, slash.blockId, { content: 'Git', git: defaultGitMeta() })
     } else {
       updateBlock(pageId, slash.blockId, { content: '' })
     }
@@ -160,7 +167,12 @@ export function BlockEditor({ pageId, blocks }: Props) {
         <div
           key={block.id}
           className="block-row group relative flex items-start gap-1 py-0.5"
-          draggable={block.type !== 'code' && block.type !== 'mermaid' && block.type !== 'api'}
+          draggable={
+            block.type !== 'code' &&
+            block.type !== 'mermaid' &&
+            block.type !== 'api' &&
+            block.type !== 'git'
+          }
           onDragStart={() => setDragIndex(index)}
           onDragOver={(e) => e.preventDefault()}
           onDrop={() => {
@@ -247,6 +259,11 @@ export function BlockEditor({ pageId, blocks }: Props) {
               <ApiBlock
                 api={block.api ?? defaultApiEndpoint()}
                 onChange={(api) => updateBlock(pageId, block.id, { api, content: 'API' })}
+              />
+            ) : block.type === 'git' ? (
+              <GitBlock
+                git={block.git ?? defaultGitMeta()}
+                onChange={(git) => updateBlock(pageId, block.id, { git, content: 'Git' })}
               />
             ) : (
               <div

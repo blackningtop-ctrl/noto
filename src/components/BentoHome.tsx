@@ -29,12 +29,14 @@ export function BentoHome() {
     <div className="fade-in mx-auto max-w-6xl px-6 py-10">
       <header className="mb-8">
         <p className="mb-2 text-sm font-medium text-[var(--color-accent)]">
-          Noto Dev · Phase 2 · 무료 · 로컬 · 비공개
+          Noto Dev · Phase 3 · 무료 · 로컬 · 비공개
         </p>
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl">안녕하세요 👋</h1>
         <p className="mt-2 max-w-xl text-[var(--color-muted)]">
-          그래프 · 스니펫 · API 블록 · 버전 히스토리까지 장착된 개발자 워크스페이스.
-          <span className="mt-1 block text-[var(--color-accent)]">Ctrl+K · 사이드바 그래프/스니펫</span>
+          Git vault · 정적 docs · 폴더 동기화 · Git 메타 블록까지. (AI 없음)
+          <span className="mt-1 block text-[var(--color-accent)]">
+            사이드바 Git &amp; Export · Ctrl+K
+          </span>
         </p>
       </header>
 
@@ -86,6 +88,11 @@ export function BentoHome() {
                 icon={<span className="text-sm">{'</>'}</span>}
                 label="스니펫"
                 onClick={() => setView({ kind: 'snippets' })}
+              />
+              <ActionBtn
+                icon={<span className="text-sm">⇪</span>}
+                label="Git & Export"
+                onClick={() => setView({ kind: 'export' })}
               />
             </div>
           </div>
@@ -176,21 +183,21 @@ export function BentoHome() {
         {/* Feature tiles */}
         <FeatureTile
           className="span-4"
-          title="그래프 뷰"
-          desc="위키링크 · 페이지 트리 연결을 force graph로 탐색"
-          emoji="🕸"
+          title="Markdown Vault"
+          desc="docs/ + manifest ZIP — git add 해서 바로 커밋"
+          emoji="📦"
         />
         <FeatureTile
           className="span-4"
-          title="스니펫 · API"
-          desc="보일러플레이트 라이브러리 · REST 엔드포인트 카드 · cURL"
-          emoji="🔌"
+          title="정적 Docs · 폴더 동기화"
+          desc="오프라인 HTML 사이트 · Chrome/Edge 폴더 읽기/쓰기"
+          emoji="🌐"
         />
         <FeatureTile
           className="span-4"
-          title="버전 히스토리"
-          desc="자동/수동 스냅샷 · 복원 · 페이지당 최대 20개"
-          emoji="⏱"
+          title="Git 메타 블록"
+          desc="/git — repo · branch · PR · issue 링크 카드"
+          emoji="🔀"
         />
       </div>
     </div>

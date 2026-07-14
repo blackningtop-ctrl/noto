@@ -9,6 +9,7 @@ import { FavoritesView } from './components/FavoritesView'
 import { CommandPalette } from './components/CommandPalette'
 import { GraphView } from './components/GraphView'
 import { SnippetsView } from './components/SnippetsView'
+import { ExportView } from './components/ExportView'
 
 export default function App() {
   const view = useStore((s) => s.view)
@@ -54,6 +55,7 @@ export default function App() {
         {view.kind === 'favorites' && <FavoritesView />}
         {view.kind === 'graph' && <GraphView />}
         {view.kind === 'snippets' && <SnippetsView />}
+        {view.kind === 'export' && <ExportView />}
       </main>
       <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
     </div>

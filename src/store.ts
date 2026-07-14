@@ -12,7 +12,7 @@ import type {
   Snippet,
   View,
 } from './types'
-import { defaultApiEndpoint } from './types'
+import { defaultApiEndpoint, defaultGitMeta } from './types'
 import { createSeedPages } from './lib/seed'
 import { uid } from './lib/id'
 import { getTemplate } from './lib/templates'
@@ -81,6 +81,7 @@ interface AppState {
 
   exportData: () => string
   importData: (json: string) => boolean
+  importWorkspacePages: (pages: Page[], snippets?: Snippet[]) => void
   resetWorkspace: () => void
 }
 
@@ -318,6 +319,10 @@ export const useStore = create<AppState>()(
           newBlock.api = defaultApiEndpoint()
           newBlock.content = 'API'
         }
+        if (type === 'git') {
+          newBlock.git = defaultGitMeta()
+          newBlock.content = 'Git'
+        }
         set((s) => ({
           pages: s.pages.map((p) => {
             if (p.id !== pageId) return p
@@ -368,6 +373,10 @@ export const useStore = create<AppState>()(
                 if (type === 'api') {
                   next.api = next.api ?? defaultApiEndpoint()
                   next.content = next.content || 'API'
+                }
+                if (type === 'git') {
+                  next.git = next.git ?? defaultGitMeta()
+                  next.content = next.content || 'Git'
                 }
                 return next
               }),
@@ -580,6 +589,16 @@ export const useStore = create<AppState>()(
         } catch {
           return false
         }
+      },
+
+      importWorkspacePages: (pages, snippets) => {
+        if (!Array.isArray(pages) || pages.length === 0) return
+        set({
+          pages,
+          snippets: snippets ?? get().snippets,
+          versions: [],
+          view: { kind: 'home' },
+        })
       },
 
       resetWorkspace: () =>
