@@ -345,3 +345,9 @@ button, input, textarea, select {
   max-width: 100%;
   height: auto;
 }
+
+/* API block */
+.api-block select option {
+  color: #111;
+  background: #fff;
+}

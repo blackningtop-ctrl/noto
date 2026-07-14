@@ -3,6 +3,7 @@ import { useStore, usePage } from '../store'
 import { BlockEditor } from './BlockEditor'
 import { DatabaseView } from './DatabaseView'
 import { Backlinks } from './Backlinks'
+import { VersionHistory } from './VersionHistory'
 import { pageToMarkdown } from '../lib/markdown'
 import { PAGE_ICONS } from '../types'
 import { Star, Trash2, MoreHorizontal, Copy, Image as ImageIcon, FileCode2 } from 'lucide-react'
@@ -188,7 +189,13 @@ export function PageView({ pageId }: Props) {
       ) : (
         <div className="mt-4">
           <BlockEditor pageId={page.id} blocks={page.blocks} />
+          <VersionHistory pageId={page.id} />
           <Backlinks page={page} />
+        </div>
+      )}
+      {page.type === 'database' && (
+        <div className="mt-4">
+          <VersionHistory pageId={page.id} />
         </div>
       )}
     </div>

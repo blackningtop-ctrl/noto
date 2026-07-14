@@ -15,6 +15,9 @@ import {
   LayoutTemplate,
   FileCode2,
   Search,
+  Network,
+  Code2,
+  Camera,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -46,6 +49,9 @@ export function CommandPalette({ open, onClose }: Props) {
   const importData = useStore((s) => s.importData)
   const view = useStore((s) => s.view)
   const allPages = useStore((s) => s.pages)
+  const snippets = useStore((s) => s.snippets)
+  const insertSnippetOnPage = useStore((s) => s.insertSnippetOnPage)
+  const saveVersion = useStore((s) => s.saveVersion)
 
   useEffect(() => {
     if (open) {
@@ -80,6 +86,33 @@ export function CommandPalette({ open, onClose }: Props) {
         label: '휴지통',
         icon: <Trash2 size={16} />,
         run: () => setView({ kind: 'trash' }),
+      },
+      {
+        id: 'graph',
+        group: '이동',
+        label: '그래프 뷰',
+        icon: <Network size={16} />,
+        run: () => setView({ kind: 'graph' }),
+      },
+      {
+        id: 'snippets',
+        group: '이동',
+        label: '스니펫 라이브러리',
+        icon: <Code2 size={16} />,
+        run: () => setView({ kind: 'snippets' }),
+      },
+      {
+        id: 'snapshot',
+        group: '만들기',
+        label: '현재 페이지 버전 스냅샷',
+        icon: <Camera size={16} />,
+        run: () => {
+          if (view.kind !== 'page') {
+            alert('페이지를 연 다음 스냅샷하세요.')
+            return
+          }
+          saveVersion(view.pageId, '수동 스냅샷', false)
+        },
       },
       {
         id: 'new-page',
@@ -191,6 +224,24 @@ export function CommandPalette({ open, onClose }: Props) {
       })
     }
 
+    for (const sn of snippets) {
+      list.push({
+        id: `snip-${sn.id}`,
+        group: '스니펫 삽입',
+        label: sn.name,
+        hint: sn.language,
+        icon: <Code2 size={16} />,
+        run: () => {
+          if (view.kind !== 'page') {
+            alert('페이지를 연 다음 스니펫을 삽입하세요.')
+            setView({ kind: 'snippets' })
+            return
+          }
+          insertSnippetOnPage(view.pageId, sn.id)
+        },
+      })
+    }
+
     for (const p of pages) {
       list.push({
         id: `page-${p.id}`,
@@ -217,12 +268,15 @@ export function CommandPalette({ open, onClose }: Props) {
     theme,
     view,
     allPages,
+    snippets,
     setView,
     createPage,
     createFromTemplate,
     toggleTheme,
     exportData,
     importData,
+    insertSnippetOnPage,
+    saveVersion,
   ])
 
   useEffect(() => setIndex(0), [query])

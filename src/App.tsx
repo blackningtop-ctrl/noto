@@ -7,6 +7,8 @@ import { SearchView } from './components/SearchView'
 import { TrashView } from './components/TrashView'
 import { FavoritesView } from './components/FavoritesView'
 import { CommandPalette } from './components/CommandPalette'
+import { GraphView } from './components/GraphView'
+import { SnippetsView } from './components/SnippetsView'
 
 export default function App() {
   const view = useStore((s) => s.view)
@@ -50,6 +52,8 @@ export default function App() {
         {view.kind === 'search' && <SearchView />}
         {view.kind === 'trash' && <TrashView />}
         {view.kind === 'favorites' && <FavoritesView />}
+        {view.kind === 'graph' && <GraphView />}
+        {view.kind === 'snippets' && <SnippetsView />}
       </main>
       <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
     </div>

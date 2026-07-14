@@ -4,7 +4,9 @@ import { useStore } from '../store'
 import { SlashMenu } from './SlashMenu'
 import { CodeBlock } from './CodeBlock'
 import { MermaidBlock } from './MermaidBlock'
+import { ApiBlock } from './ApiBlock'
 import { WikiText } from './WikiText'
+import { defaultApiEndpoint } from '../types'
 import { GripVertical, Plus, Trash2 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -98,7 +100,7 @@ export function BlockEditor({ pageId, blocks }: Props) {
   const onKeyDown = (e: React.KeyboardEvent, block: Block, index: number) => {
     if (slash) return
 
-    const isCodeLike = block.type === 'code' || block.type === 'mermaid'
+    const isCodeLike = block.type === 'code' || block.type === 'mermaid' || block.type === 'api'
     if (e.key === 'Enter' && !e.shiftKey && !isCodeLike) {
       e.preventDefault()
       const id = addBlock(pageId, block.id, 'paragraph')
@@ -138,6 +140,8 @@ export function BlockEditor({ pageId, blocks }: Props) {
       })
     } else if (type === 'code') {
       updateBlock(pageId, slash.blockId, { content: '', language: 'typescript' })
+    } else if (type === 'api') {
+      updateBlock(pageId, slash.blockId, { content: 'API', api: defaultApiEndpoint() })
     } else {
       updateBlock(pageId, slash.blockId, { content: '' })
     }
@@ -156,7 +160,7 @@ export function BlockEditor({ pageId, blocks }: Props) {
         <div
           key={block.id}
           className="block-row group relative flex items-start gap-1 py-0.5"
-          draggable={block.type !== 'code' && block.type !== 'mermaid'}
+          draggable={block.type !== 'code' && block.type !== 'mermaid' && block.type !== 'api'}
           onDragStart={() => setDragIndex(index)}
           onDragOver={(e) => e.preventDefault()}
           onDrop={() => {
@@ -238,6 +242,11 @@ export function BlockEditor({ pageId, blocks }: Props) {
                 textareaRef={(el) => {
                   refs.current[block.id] = el
                 }}
+              />
+            ) : block.type === 'api' ? (
+              <ApiBlock
+                api={block.api ?? defaultApiEndpoint()}
+                onChange={(api) => updateBlock(pageId, block.id, { api, content: 'API' })}
               />
             ) : (
               <div

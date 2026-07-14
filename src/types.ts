@@ -9,10 +9,23 @@ export type BlockType =
   | 'quote'
   | 'code'
   | 'mermaid'
+  | 'api'
   | 'divider'
   | 'callout'
   | 'image'
   | 'toggle'
+
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS'
+
+export interface ApiEndpoint {
+  method: HttpMethod
+  path: string
+  summary: string
+  requestBody: string
+  responseBody: string
+  statusCode: number
+  contentType: string
+}
 
 export interface Block {
   id: string
@@ -22,6 +35,7 @@ export interface Block {
   language?: string
   open?: boolean
   children?: Block[]
+  api?: ApiEndpoint
 }
 
 export type PropertyType = 'text' | 'number' | 'select' | 'multi_select' | 'date' | 'checkbox' | 'url' | 'status'
@@ -80,12 +94,37 @@ export interface Page {
   updatedAt: number
 }
 
+export interface Snippet {
+  id: string
+  name: string
+  description: string
+  language: string
+  body: string
+  tags: string[]
+  createdAt: number
+  updatedAt: number
+}
+
+export interface PageVersion {
+  id: string
+  pageId: string
+  title: string
+  icon: string
+  blocks: Block[]
+  database?: Database
+  createdAt: number
+  label: string
+  auto: boolean
+}
+
 export type View =
   | { kind: 'home' }
   | { kind: 'page'; pageId: string }
   | { kind: 'trash' }
   | { kind: 'favorites' }
   | { kind: 'search' }
+  | { kind: 'graph' }
+  | { kind: 'snippets' }
 
 export const SELECT_COLORS = [
   '#ef4444',
@@ -104,3 +143,17 @@ export const PAGE_ICONS = [
   '✅', '🔥', '💎', '🎨', '📊', '🧠', '⚡', '🌟', '📌', '🗓️',
   '💼', '🛒', '🎮', '📚', '🧪', '🛠️', '🎵', '📷', '🌍', '❤️',
 ]
+
+export const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
+
+export function defaultApiEndpoint(): ApiEndpoint {
+  return {
+    method: 'GET',
+    path: '/api/v1/resource',
+    summary: '엔드포인트 설명',
+    requestBody: '{\n  \n}',
+    responseBody: '{\n  "ok": true\n}',
+    statusCode: 200,
+    contentType: 'application/json',
+  }
+}

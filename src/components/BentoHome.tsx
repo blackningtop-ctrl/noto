@@ -29,12 +29,12 @@ export function BentoHome() {
     <div className="fade-in mx-auto max-w-6xl px-6 py-10">
       <header className="mb-8">
         <p className="mb-2 text-sm font-medium text-[var(--color-accent)]">
-          Noto Dev · Phase 1 · 무료 · 로컬 · 비공개
+          Noto Dev · Phase 2 · 무료 · 로컬 · 비공개
         </p>
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl">안녕하세요 👋</h1>
         <p className="mt-2 max-w-xl text-[var(--color-muted)]">
-          개발자용 워크스페이스 — 코드 · Mermaid · 위키링크 · 템플릿 · Markdown.
-          <span className="mt-1 block text-[var(--color-accent)]">Ctrl+K 로 커맨드 팔레트를 여세요.</span>
+          그래프 · 스니펫 · API 블록 · 버전 히스토리까지 장착된 개발자 워크스페이스.
+          <span className="mt-1 block text-[var(--color-accent)]">Ctrl+K · 사이드바 그래프/스니펫</span>
         </p>
       </header>
 
@@ -76,6 +76,16 @@ export function BentoHome() {
                   const g = pages.find((p) => p.title.includes('단축키'))
                   if (g) setView({ kind: 'page', pageId: g.id })
                 }}
+              />
+              <ActionBtn
+                icon={<span className="text-sm">◈</span>}
+                label="그래프 뷰"
+                onClick={() => setView({ kind: 'graph' })}
+              />
+              <ActionBtn
+                icon={<span className="text-sm">{'</>'}</span>}
+                label="스니펫"
+                onClick={() => setView({ kind: 'snippets' })}
               />
             </div>
           </div>
@@ -166,21 +176,21 @@ export function BentoHome() {
         {/* Feature tiles */}
         <FeatureTile
           className="span-4"
-          title="코드 & Mermaid"
-          desc="하이라이트 · 줄번호 · 복사 · 시퀀스/플로우 다이어그램"
-          emoji="💻"
+          title="그래프 뷰"
+          desc="위키링크 · 페이지 트리 연결을 force graph로 탐색"
+          emoji="🕸"
         />
         <FeatureTile
           className="span-4"
-          title="위키 · 템플릿"
-          desc="[[링크]] 백링크 · ADR · Bug · Sprint · Postmortem"
-          emoji="🔗"
+          title="스니펫 · API"
+          desc="보일러플레이트 라이브러리 · REST 엔드포인트 카드 · cURL"
+          emoji="🔌"
         />
         <FeatureTile
           className="span-4"
-          title="Ctrl+K · Markdown"
-          desc="커맨드 팔레트, MD/JSON 가져오기·내보내기"
-          emoji="⚡"
+          title="버전 히스토리"
+          desc="자동/수동 스냅샷 · 복원 · 페이지당 최대 20개"
+          emoji="⏱"
         />
       </div>
     </div>

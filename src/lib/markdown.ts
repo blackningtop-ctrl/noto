@@ -41,6 +41,33 @@ export function blocksToMarkdown(blocks: Block[]): string {
       case 'mermaid':
         lines.push(`\`\`\`mermaid\n${b.content}\n\`\`\``)
         break
+      case 'api':
+        if (b.api) {
+          lines.push(
+            [
+              `### \`${b.api.method}\` ${b.api.path}`,
+              '',
+              b.api.summary,
+              '',
+              `Status: ${b.api.statusCode} · \`${b.api.contentType}\``,
+              '',
+              '**Request**',
+              '',
+              '```json',
+              b.api.requestBody,
+              '```',
+              '',
+              '**Response**',
+              '',
+              '```json',
+              b.api.responseBody,
+              '```',
+            ].join('\n'),
+          )
+        } else {
+          lines.push(b.content)
+        }
+        break
       case 'divider':
         lines.push('---')
         break

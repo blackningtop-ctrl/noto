@@ -20,6 +20,8 @@ import {
   MoreHorizontal,
   Copy,
   RotateCcw,
+  Network,
+  Code2,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -222,6 +224,18 @@ export function Sidebar() {
           label="홈"
           active={view.kind === 'home'}
           onClick={() => setView({ kind: 'home' })}
+        />
+        <NavItem
+          icon={<Network size={16} />}
+          label="그래프"
+          active={view.kind === 'graph'}
+          onClick={() => setView({ kind: 'graph' })}
+        />
+        <NavItem
+          icon={<Code2 size={16} />}
+          label="스니펫"
+          active={view.kind === 'snippets'}
+          onClick={() => setView({ kind: 'snippets' })}
         />
         <NavItem
           icon={<Star size={16} />}

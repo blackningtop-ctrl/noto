@@ -1,13 +1,31 @@
 import { useMemo } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Block, BlockType, Database, DbRow, Page, Property, View } from './types'
+import type {
+  Block,
+  BlockType,
+  Database,
+  DbRow,
+  Page,
+  PageVersion,
+  Property,
+  Snippet,
+  View,
+} from './types'
+import { defaultApiEndpoint } from './types'
 import { createSeedPages } from './lib/seed'
 import { uid } from './lib/id'
 import { getTemplate } from './lib/templates'
+import { createDefaultSnippets } from './lib/snippets'
+
+const MAX_VERSIONS_PER_PAGE = 20
+const AUTO_SNAPSHOT_MS = 30_000
+const lastAutoSnapshot: Record<string, number> = {}
 
 interface AppState {
   pages: Page[]
+  snippets: Snippet[]
+  versions: PageVersion[]
   view: View
   sidebarOpen: boolean
   theme: 'light' | 'dark'
@@ -52,9 +70,27 @@ interface AppState {
   addDbProperty: (pageId: string, prop: Omit<Property, 'id'>) => void
   setDbView: (pageId: string, viewId: string) => void
 
+  addSnippet: (data: Omit<Snippet, 'id' | 'createdAt' | 'updatedAt'>) => string
+  updateSnippet: (id: string, patch: Partial<Snippet>) => void
+  deleteSnippet: (id: string) => void
+  insertSnippetOnPage: (pageId: string, snippetId: string, afterBlockId?: string | null) => void
+
+  saveVersion: (pageId: string, label?: string, auto?: boolean) => void
+  restoreVersion: (versionId: string) => void
+  deleteVersion: (versionId: string) => void
+
   exportData: () => string
   importData: (json: string) => boolean
   resetWorkspace: () => void
+}
+
+function pruneVersions(versions: PageVersion[], pageId: string): PageVersion[] {
+  const forPage = versions
+    .filter((v) => v.pageId === pageId)
+    .sort((a, b) => b.createdAt - a.createdAt)
+  if (forPage.length <= MAX_VERSIONS_PER_PAGE) return versions
+  const keep = new Set(forPage.slice(0, MAX_VERSIONS_PER_PAGE).map((v) => v.id))
+  return versions.filter((v) => v.pageId !== pageId || keep.has(v.id))
 }
 
 function touch(page: Page): Page {
@@ -92,6 +128,8 @@ export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
       pages: createSeedPages(),
+      snippets: createDefaultSnippets(),
+      versions: [],
       view: { kind: 'home' },
       sidebarOpen: true,
       theme: 'light',
@@ -148,10 +186,12 @@ export const useStore = create<AppState>()(
         })
       },
 
-      updatePage: (id, patch) =>
+      updatePage: (id, patch) => {
         set((s) => ({
           pages: s.pages.map((p) => (p.id === id ? touch({ ...p, ...patch }) : p)),
-        })),
+        }))
+        get().saveVersion(id, 'auto', true)
+      },
 
       deletePage: (id) => {
         const mark = (pages: Page[], target: string): Page[] =>
@@ -239,12 +279,14 @@ export const useStore = create<AppState>()(
         return newId
       },
 
-      setBlocks: (pageId, blocks) =>
+      setBlocks: (pageId, blocks) => {
         set((s) => ({
           pages: s.pages.map((p) => (p.id === pageId ? touch({ ...p, blocks }) : p)),
-        })),
+        }))
+        get().saveVersion(pageId, 'auto', true)
+      },
 
-      updateBlock: (pageId, blockId, patch) =>
+      updateBlock: (pageId, blockId, patch) => {
         set((s) => ({
           pages: s.pages.map((p) => {
             if (p.id !== pageId) return p
@@ -253,7 +295,9 @@ export const useStore = create<AppState>()(
               blocks: p.blocks.map((b) => (b.id === blockId ? { ...b, ...patch } : b)),
             })
           }),
-        })),
+        }))
+        get().saveVersion(pageId, 'auto', true)
+      },
 
       addBlock: (pageId, afterId, type = 'paragraph', content = '') => {
         const newId = uid()
@@ -270,6 +314,10 @@ export const useStore = create<AppState>()(
         if (type === 'mermaid' && !content) {
           newBlock.content = 'flowchart LR\n  A[Start] --> B[Done]'
         }
+        if (type === 'api') {
+          newBlock.api = defaultApiEndpoint()
+          newBlock.content = 'API'
+        }
         set((s) => ({
           pages: s.pages.map((p) => {
             if (p.id !== pageId) return p
@@ -283,6 +331,7 @@ export const useStore = create<AppState>()(
             return touch({ ...p, blocks })
           }),
         }))
+        get().saveVersion(pageId, 'auto', true)
         return newId
       },
 
@@ -315,6 +364,10 @@ export const useStore = create<AppState>()(
                 }
                 if (type === 'mermaid' && !next.content) {
                   next.content = 'flowchart LR\n  A[Start] --> B[Done]'
+                }
+                if (type === 'api') {
+                  next.api = next.api ?? defaultApiEndpoint()
+                  next.content = next.content || 'API'
                 }
                 return next
               }),
@@ -400,9 +453,115 @@ export const useStore = create<AppState>()(
       setDbView: (pageId, viewId) =>
         get().updateDatabase(pageId, (db) => ({ ...db, activeViewId: viewId })),
 
+      addSnippet: (data) => {
+        const id = uid()
+        const now = Date.now()
+        const snippet: Snippet = { ...data, id, createdAt: now, updatedAt: now }
+        set((s) => ({ snippets: [snippet, ...s.snippets] }))
+        return id
+      },
+
+      updateSnippet: (id, patch) =>
+        set((s) => ({
+          snippets: s.snippets.map((sn) =>
+            sn.id === id ? { ...sn, ...patch, updatedAt: Date.now() } : sn,
+          ),
+        })),
+
+      deleteSnippet: (id) =>
+        set((s) => ({ snippets: s.snippets.filter((sn) => sn.id !== id) })),
+
+      insertSnippetOnPage: (pageId, snippetId, afterBlockId = null) => {
+        const sn = get().snippets.find((s) => s.id === snippetId)
+        if (!sn) return
+        const page = get().pages.find((p) => p.id === pageId)
+        if (!page || page.type !== 'page') return
+        const after =
+          afterBlockId ?? page.blocks[page.blocks.length - 1]?.id ?? null
+        const newId = uid()
+        const isMd = sn.language === 'markdown'
+        const block: Block = isMd
+          ? { id: newId, type: 'paragraph', content: sn.body }
+          : {
+              id: newId,
+              type: 'code',
+              content: sn.body,
+              language: sn.language === 'dockerfile' ? 'bash' : sn.language,
+            }
+        set((s) => ({
+          pages: s.pages.map((p) => {
+            if (p.id !== pageId) return p
+            const blocks = [...p.blocks]
+            if (!after) blocks.push(block)
+            else {
+              const idx = blocks.findIndex((b) => b.id === after)
+              blocks.splice(idx + 1, 0, block)
+            }
+            return touch({ ...p, blocks })
+          }),
+        }))
+        get().saveVersion(pageId, 'auto', true)
+      },
+
+      saveVersion: (pageId, label, auto = false) => {
+        const page = get().pages.find((p) => p.id === pageId)
+        if (!page || page.deleted) return
+        if (auto) {
+          const last = lastAutoSnapshot[pageId] ?? 0
+          if (Date.now() - last < AUTO_SNAPSHOT_MS) return
+          lastAutoSnapshot[pageId] = Date.now()
+        }
+        const version: PageVersion = {
+          id: uid(),
+          pageId,
+          title: page.title,
+          icon: page.icon,
+          blocks: structuredClone(page.blocks),
+          database: page.database ? structuredClone(page.database) : undefined,
+          createdAt: Date.now(),
+          label: label || (auto ? '자동 저장' : '수동 스냅샷'),
+          auto,
+        }
+        set((s) => ({
+          versions: pruneVersions([version, ...s.versions], pageId),
+        }))
+      },
+
+      restoreVersion: (versionId) => {
+        const version = get().versions.find((v) => v.id === versionId)
+        if (!version) return
+        // snapshot current before restore
+        get().saveVersion(version.pageId, '복원 전 백업', false)
+        set((s) => ({
+          pages: s.pages.map((p) =>
+            p.id === version.pageId
+              ? touch({
+                  ...p,
+                  title: version.title,
+                  icon: version.icon,
+                  blocks: structuredClone(version.blocks),
+                  database: version.database
+                    ? structuredClone(version.database)
+                    : p.database,
+                })
+              : p,
+          ),
+          view: { kind: 'page', pageId: version.pageId },
+        }))
+      },
+
+      deleteVersion: (versionId) =>
+        set((s) => ({ versions: s.versions.filter((v) => v.id !== versionId) })),
+
       exportData: () =>
         JSON.stringify(
-          { version: 1, exportedAt: new Date().toISOString(), pages: get().pages },
+          {
+            version: 2,
+            exportedAt: new Date().toISOString(),
+            pages: get().pages,
+            snippets: get().snippets,
+            versions: get().versions,
+          },
           null,
           2,
         ),
@@ -411,7 +570,12 @@ export const useStore = create<AppState>()(
         try {
           const data = JSON.parse(json)
           if (!Array.isArray(data.pages)) return false
-          set({ pages: data.pages, view: { kind: 'home' } })
+          set({
+            pages: data.pages,
+            snippets: Array.isArray(data.snippets) ? data.snippets : get().snippets,
+            versions: Array.isArray(data.versions) ? data.versions : [],
+            view: { kind: 'home' },
+          })
           return true
         } catch {
           return false
@@ -419,15 +583,35 @@ export const useStore = create<AppState>()(
       },
 
       resetWorkspace: () =>
-        set({ pages: createSeedPages(), view: { kind: 'home' } }),
+        set({
+          pages: createSeedPages(),
+          snippets: createDefaultSnippets(),
+          versions: [],
+          view: { kind: 'home' },
+        }),
     }),
     {
       name: 'noto-workspace-v1',
       partialize: (s) => ({
         pages: s.pages,
+        snippets: s.snippets,
+        versions: s.versions,
         theme: s.theme,
         sidebarOpen: s.sidebarOpen,
       }),
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<AppState>
+        return {
+          ...current,
+          ...p,
+          snippets:
+            Array.isArray(p.snippets) && p.snippets.length > 0
+              ? p.snippets
+              : current.snippets,
+          versions: Array.isArray(p.versions) ? p.versions : [],
+          pages: Array.isArray(p.pages) ? p.pages : current.pages,
+        }
+      },
       onRehydrateStorage: () => (state) => {
         if (state?.theme === 'dark') {
           document.documentElement.classList.add('dark')
