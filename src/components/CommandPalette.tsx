@@ -261,11 +261,19 @@ export function CommandPalette({ open, onClose }: Props) {
       },
     )
 
+    list.push({
+      id: 'templates-hub',
+      group: '이동',
+      label: '양식 전체 보기',
+      icon: <LayoutTemplate size={16} />,
+      run: () => setView({ kind: 'templates' }),
+    })
+
     for (const t of TEMPLATES) {
       list.push({
         id: `tpl-${t.id}`,
-        group: '템플릿',
-        label: t.name,
+        group: '양식',
+        label: `${t.icon} ${t.name}`,
         hint: t.description,
         icon: <LayoutTemplate size={16} />,
         run: () => createFromTemplate(t.id),

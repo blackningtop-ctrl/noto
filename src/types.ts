@@ -176,6 +176,7 @@ export type View =
   | { kind: 'snippets' }
   | { kind: 'export' }
   | { kind: 'settings' }
+  | { kind: 'templates' }
 
 export const SELECT_COLORS = [
   '#ef4444',

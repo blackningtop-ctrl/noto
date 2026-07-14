@@ -10,7 +10,9 @@ import {
   Sparkles,
   X,
   Lightbulb,
+  LayoutTemplate,
 } from 'lucide-react'
+import { TEMPLATES, templatesByCategory } from '../lib/templates'
 
 const TIP_KEY = 'noto-welcome-tips-v1'
 
@@ -18,8 +20,10 @@ export function BentoHome() {
   const pages = useActivePages()
   const setView = useStore((s) => s.setView)
   const createPage = useStore((s) => s.createPage)
+  const createFromTemplate = useStore((s) => s.createFromTemplate)
   const setCommandPaletteOpen = useStore((s) => s.setCommandPaletteOpen)
   const [showTips, setShowTips] = useState(false)
+  const popular = templatesByCategory('everyday').slice(0, 6)
 
   useEffect(() => {
     try {
@@ -132,6 +136,9 @@ export function BentoHome() {
         <Chip onClick={() => setCommandPaletteOpen(true)}>
           <Sparkles size={14} /> 빠른 찾기
         </Chip>
+        <Chip onClick={() => setView({ kind: 'templates' })}>
+          <LayoutTemplate size={14} /> 모든 양식 ({TEMPLATES.length})
+        </Chip>
         {!showTips && (
           <Chip
             onClick={() => {
@@ -147,6 +154,39 @@ export function BentoHome() {
           </Chip>
         )}
       </div>
+
+      <section className="mb-8">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--color-muted)]">
+            <LayoutTemplate size={15} /> 인기 양식
+          </h2>
+          <button
+            type="button"
+            className="text-xs font-medium text-[var(--color-accent)] hover:underline"
+            onClick={() => setView({ kind: 'templates' })}
+          >
+            더 보기 →
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {popular.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => createFromTemplate(t.id)}
+              className="flex items-center gap-2.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-3 text-left shadow-sm transition hover:border-[var(--color-accent)]"
+            >
+              <span className="text-xl">{t.icon}</span>
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-semibold">{t.name}</span>
+                <span className="block truncate text-[11px] text-[var(--color-muted)]">
+                  {t.description}
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-5">
         <section className="lg:col-span-3">

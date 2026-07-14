@@ -22,6 +22,7 @@ import {
   FolderOutput,
   Settings,
   HelpCircle,
+  LayoutTemplate,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -238,6 +239,12 @@ export function Sidebar() {
           label="홈"
           active={view.kind === 'home'}
           onClick={() => setView({ kind: 'home' })}
+        />
+        <NavItem
+          icon={<LayoutTemplate size={16} />}
+          label="양식"
+          active={view.kind === 'templates'}
+          onClick={() => setView({ kind: 'templates' })}
         />
         <NavItem
           icon={<Star size={16} />}
