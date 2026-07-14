@@ -162,9 +162,11 @@ export interface AppSettings {
   lastBackupAt: number | null
   backupRemindDays: number
   schemaVersion: number
+  /** SpaceXAI model id, e.g. grok-4.5 — API key stored separately */
+  aiModel: string
 }
 
-export const CURRENT_SCHEMA_VERSION = 3
+export const CURRENT_SCHEMA_VERSION = 4
 
 export type View =
   | { kind: 'home' }
@@ -240,6 +242,7 @@ export function defaultSettings(): AppSettings {
     lastBackupAt: null,
     backupRemindDays: 7,
     schemaVersion: CURRENT_SCHEMA_VERSION,
+    aiModel: 'grok-4.5',
   }
 }
 

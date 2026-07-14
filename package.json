@@ -1,8 +1,8 @@
 {
   "name": "noto",
   "private": true,
-  "version": "2.0.0",
-  "description": "Noto Dev — local-complete Notion-style workspace for developers (no AI, no cloud)",
+  "version": "2.1.0",
+  "description": "Noto Dev — local Notion-style workspace with optional SpaceXAI (xAI) features",
   "type": "module",
   "scripts": {
     "dev": "vite",

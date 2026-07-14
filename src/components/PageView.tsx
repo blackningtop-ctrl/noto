@@ -4,9 +4,19 @@ import { BlockEditor } from './BlockEditor'
 import { DatabaseView } from './DatabaseView'
 import { Backlinks } from './Backlinks'
 import { VersionHistory } from './VersionHistory'
+import { AiPanel } from './AiPanel'
 import { pageToMarkdown } from '../lib/markdown'
 import { PAGE_ICONS } from '../types'
-import { Star, Trash2, MoreHorizontal, Copy, Image as ImageIcon, FileCode2 } from 'lucide-react'
+import { hasXaiApiKey } from '../lib/ai-key'
+import {
+  Star,
+  Trash2,
+  MoreHorizontal,
+  Copy,
+  Image as ImageIcon,
+  FileCode2,
+  Sparkles,
+} from 'lucide-react'
 import clsx from 'clsx'
 
 const COVERS = [
@@ -32,6 +42,7 @@ export function PageView({ pageId }: Props) {
   const duplicatePage = useStore((s) => s.duplicatePage)
   const [iconOpen, setIconOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [aiOpen, setAiOpen] = useState(false)
   const titleRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -107,6 +118,20 @@ export function PageView({ pageId }: Props) {
                 <ImageIcon size={14} /> 배경
               </button>
             )}
+            <button
+              type="button"
+              className={clsx(
+                'inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs hover:bg-[var(--color-hover)]',
+                aiOpen
+                  ? 'bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
+                  : 'text-[var(--color-muted)]',
+              )}
+              onClick={() => setAiOpen((v) => !v)}
+              title={hasXaiApiKey() ? 'AI 도우미' : 'AI (설정에서 API 키 필요)'}
+            >
+              <Sparkles size={14} />
+              AI
+            </button>
             <button
               type="button"
               className={clsx(
@@ -198,6 +223,8 @@ export function PageView({ pageId }: Props) {
           <VersionHistory pageId={page.id} />
         </div>
       )}
+
+      <AiPanel page={page} open={aiOpen} onClose={() => setAiOpen(false)} />
     </div>
   )
 }

@@ -1,5 +1,8 @@
+import { useEffect, useState } from 'react'
 import { useStore } from '../store'
-import { Settings, Trash2, Download, Shield } from 'lucide-react'
+import { Settings, Trash2, Download, Shield, Sparkles, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { getXaiApiKey, setXaiApiKey, maskKey } from '../lib/ai-key'
+import { AI_MODELS, DEFAULT_AI_MODEL, testXaiConnection } from '../lib/xai'
 
 export function SettingsView() {
   const settings = useStore((s) => s.settings)
@@ -11,6 +14,14 @@ export function SettingsView() {
   const versions = useStore((s) => s.versions)
   const pages = useStore((s) => s.pages)
   const trashCount = pages.filter((p) => p.deleted).length
+  const [apiKey, setApiKey] = useState('')
+  const [showKey, setShowKey] = useState(false)
+  const [testMsg, setTestMsg] = useState<string | null>(null)
+  const [testing, setTesting] = useState(false)
+
+  useEffect(() => {
+    setApiKey(getXaiApiKey())
+  }, [])
 
   const backup = () => {
     const blob = new Blob([exportData()], { type: 'application/json' })
@@ -34,6 +45,121 @@ export function SettingsView() {
       </p>
 
       <section className="mt-8 space-y-4">
+        <div className="rounded-2xl border border-[var(--color-border)] p-4">
+          <h2 className="mb-1 flex items-center gap-2 font-semibold">
+            <Sparkles size={16} className="text-[var(--color-accent)]" /> AI (SpaceXAI / xAI)
+          </h2>
+          <p className="mb-3 text-xs leading-relaxed text-[var(--color-muted)]">
+            API 키를 넣으면 요약·이어쓰기·번역·채팅을 쓸 수 있어요. 키는 이 브라우저에만 저장되고,
+            요청할 때만 <code className="rounded bg-[var(--color-hover)] px-1">api.x.ai</code> 로
+            전송됩니다. 워크스페이스 백업 JSON에는 키가 들어가지 않아요.
+          </p>
+          <label className="mb-1 block text-xs text-[var(--color-muted)]">XAI_API_KEY</label>
+          <div className="flex gap-2">
+            <input
+              type={showKey ? 'text' : 'password'}
+              className="min-w-0 flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-2 font-mono text-sm outline-none focus:border-[var(--color-accent)]"
+              placeholder="xai-..."
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              autoComplete="off"
+            />
+            <button
+              type="button"
+              className="rounded-xl border border-[var(--color-border)] px-2.5 hover:bg-[var(--color-hover)]"
+              onClick={() => setShowKey((v) => !v)}
+              title={showKey ? '숨기기' : '보기'}
+            >
+              {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+          {apiKey && (
+            <p className="mt-1 text-[11px] text-[var(--color-muted)]">저장됨: {maskKey(apiKey)}</p>
+          )}
+          <label className="mb-1 mt-3 block text-xs text-[var(--color-muted)]">모델</label>
+          <select
+            className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-2 text-sm outline-none"
+            value={settings.aiModel || DEFAULT_AI_MODEL}
+            onChange={(e) => updateSettings({ aiModel: e.target.value })}
+          >
+            {AI_MODELS.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="rounded-xl bg-[var(--color-accent)] px-3 py-2 text-sm font-medium text-white"
+              onClick={() => {
+                setXaiApiKey(apiKey)
+                setTestMsg(apiKey.trim() ? '키가 저장되었어요.' : '키가 삭제되었어요.')
+              }}
+            >
+              키 저장
+            </button>
+            <button
+              type="button"
+              disabled={testing || !apiKey.trim()}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--color-border)] px-3 py-2 text-sm hover:bg-[var(--color-hover)] disabled:opacity-40"
+              onClick={async () => {
+                setTesting(true)
+                setTestMsg(null)
+                try {
+                  setXaiApiKey(apiKey)
+                  const reply = await testXaiConnection(
+                    apiKey,
+                    settings.aiModel || DEFAULT_AI_MODEL,
+                  )
+                  setTestMsg(`연결 성공: ${reply}`)
+                } catch (e) {
+                  setTestMsg(e instanceof Error ? e.message : '연결 실패')
+                } finally {
+                  setTesting(false)
+                }
+              }}
+            >
+              {testing ? <Loader2 size={14} className="animate-spin" /> : null}
+              연결 테스트
+            </button>
+            <button
+              type="button"
+              className="rounded-xl px-3 py-2 text-sm text-[var(--color-danger)] hover:bg-[var(--color-hover)]"
+              onClick={() => {
+                setApiKey('')
+                setXaiApiKey('')
+                setTestMsg('키가 삭제되었어요.')
+              }}
+            >
+              키 삭제
+            </button>
+          </div>
+          {testMsg && (
+            <p className="mt-2 text-xs text-[var(--color-muted)] whitespace-pre-wrap">{testMsg}</p>
+          )}
+          <p className="mt-3 text-[11px] leading-relaxed text-[var(--color-muted)]">
+            키 발급:{' '}
+            <a
+              className="text-[var(--color-accent)] underline"
+              href="https://console.x.ai"
+              target="_blank"
+              rel="noreferrer"
+            >
+              console.x.ai
+            </a>
+            {' · '}
+            <a
+              className="text-[var(--color-accent)] underline"
+              href="https://docs.x.ai"
+              target="_blank"
+              rel="noreferrer"
+            >
+              문서
+            </a>
+          </p>
+        </div>
+
         <div className="rounded-2xl border border-[var(--color-border)] p-4">
           <h2 className="mb-3 flex items-center gap-2 font-semibold">
             <Trash2 size={16} /> 휴지통

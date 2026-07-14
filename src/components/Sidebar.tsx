@@ -23,7 +23,9 @@ import {
   Settings,
   HelpCircle,
   LayoutTemplate,
+  Sparkles,
 } from 'lucide-react'
+import { hasXaiApiKey } from '../lib/ai-key'
 import clsx from 'clsx'
 
 export function Sidebar() {
@@ -327,6 +329,12 @@ export function Sidebar() {
         </button>
         {moreOpen && (
           <div className="mt-0.5 space-y-0.5">
+            <NavItem
+              icon={<Sparkles size={15} />}
+              label={hasXaiApiKey() ? 'AI 설정' : 'AI 켜기 (API 키)'}
+              active={view.kind === 'settings'}
+              onClick={() => setView({ kind: 'settings' })}
+            />
             <NavItem
               icon={<Network size={15} />}
               label="연결 보기"

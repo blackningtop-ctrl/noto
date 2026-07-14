@@ -23,7 +23,9 @@ import {
   Globe,
   Undo2,
   Redo2,
+  Sparkles,
 } from 'lucide-react'
+import { hasXaiApiKey } from '../lib/ai-key'
 import { exportMarkdownVault, exportStaticSite } from '../lib/export-vault'
 import { undoWorkspace, redoWorkspace } from '../store'
 import clsx from 'clsx'
@@ -267,6 +269,14 @@ export function CommandPalette({ open, onClose }: Props) {
       label: '양식 전체 보기',
       icon: <LayoutTemplate size={16} />,
       run: () => setView({ kind: 'templates' }),
+    })
+    list.push({
+      id: 'ai-settings',
+      group: 'AI',
+      label: hasXaiApiKey() ? 'AI 설정 (키 있음)' : 'AI 설정 — API 키 입력',
+      hint: 'SpaceXAI',
+      icon: <Sparkles size={16} />,
+      run: () => setView({ kind: 'settings' }),
     })
 
     for (const t of TEMPLATES) {
