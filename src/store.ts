@@ -3,6 +3,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { temporal } from 'zundo'
 import type {
+  AppSettings,
   Block,
   BlockType,
   Database,
@@ -13,12 +14,13 @@ import type {
   Snippet,
   View,
 } from './types'
-import { defaultApiEndpoint, defaultGitMeta } from './types'
+import { defaultApiEndpoint, defaultGitMeta, defaultSettings, defaultTableData } from './types'
 import { createSeedPages } from './lib/seed'
 import { uid } from './lib/id'
 import { getTemplate } from './lib/templates'
 import { createDefaultSnippets } from './lib/snippets'
 import { createIdbStorage } from './lib/idb-storage'
+import { migratePages, migrateSettings } from './lib/migrate'
 
 const MAX_VERSIONS_PER_PAGE = 20
 const AUTO_SNAPSHOT_MS = 30_000
@@ -28,6 +30,7 @@ interface AppState {
   pages: Page[]
   snippets: Snippet[]
   versions: PageVersion[]
+  settings: AppSettings
   view: View
   sidebarOpen: boolean
   theme: 'light' | 'dark'
@@ -38,6 +41,9 @@ interface AppState {
   toggleTheme: () => void
   setSearchQuery: (q: string) => void
   setCommandPaletteOpen: (open: boolean) => void
+  updateSettings: (patch: Partial<AppSettings>) => void
+  purgeExpiredTrash: () => void
+  markBackupNow: () => void
 
   createPage: (opts?: {
     parentId?: string | null
@@ -56,6 +62,7 @@ interface AppState {
   emptyTrash: () => void
   toggleFavorite: (id: string) => void
   movePage: (id: string, parentId: string | null) => void
+  reorderPage: (id: string, targetId: string, position: 'before' | 'after' | 'inside') => void
   duplicatePage: (id: string) => string | null
 
   setBlocks: (pageId: string, blocks: Block[]) => void
@@ -110,6 +117,7 @@ function emptyBlocks(): Block[] {
 
 function emptyDatabase(): Database {
   const statusId = uid()
+  const dateId = uid()
   const options = [
     { id: uid(), name: '할 일', color: '#64748b' },
     { id: uid(), name: '진행 중', color: '#3b82f6' },
@@ -117,27 +125,37 @@ function emptyDatabase(): Database {
   ]
   const tableId = uid()
   const boardId = uid()
+  const calId = uid()
   return {
     id: uid(),
     properties: [
       { id: statusId, name: '상태', type: 'status', options },
+      { id: dateId, name: '날짜', type: 'date' },
     ],
     rows: [],
     views: [
       { id: tableId, name: '테이블', type: 'table' },
       { id: boardId, name: '보드', type: 'board', groupBy: statusId },
+      { id: calId, name: '캘린더', type: 'calendar', datePropId: dateId },
     ],
     activeViewId: tableId,
   }
+}
+
+function nextOrder(pages: Page[], parentId: string | null): number {
+  const siblings = pages.filter((p) => !p.deleted && p.parentId === parentId)
+  if (siblings.length === 0) return 0
+  return Math.max(...siblings.map((p) => p.order ?? 0)) + 1000
 }
 
 export const useStore = create<AppState>()(
   persist(
     temporal(
     (set, get) => ({
-      pages: createSeedPages(),
+      pages: migratePages(createSeedPages()),
       snippets: createDefaultSnippets(),
       versions: [],
+      settings: defaultSettings(),
       view: { kind: 'home' },
       sidebarOpen: true,
       theme: 'light',
@@ -154,15 +172,33 @@ export const useStore = create<AppState>()(
         }),
       setSearchQuery: (searchQuery) => set({ searchQuery }),
       setCommandPaletteOpen: (commandPaletteOpen) => set({ commandPaletteOpen }),
+      updateSettings: (patch) =>
+        set((s) => ({ settings: { ...s.settings, ...patch } })),
+      markBackupNow: () =>
+        set((s) => ({
+          settings: { ...s.settings, lastBackupAt: Date.now() },
+        })),
+      purgeExpiredTrash: () => {
+        const days = get().settings.trashRetentionDays
+        if (days <= 0) return
+        const cutoff = Date.now() - days * 24 * 60 * 60 * 1000
+        set((s) => ({
+          pages: s.pages.filter(
+            (p) => !p.deleted || !p.deletedAt || p.deletedAt > cutoff,
+          ),
+        }))
+      },
 
       createPage: (opts = {}) => {
         const id = uid()
         const type = opts.type ?? 'page'
+        const parentId = opts.parentId ?? null
         const page: Page = {
           id,
           title: opts.title ?? (type === 'database' ? '새 데이터베이스' : '제목 없음'),
           icon: opts.icon ?? (type === 'database' ? '📊' : '📄'),
-          parentId: opts.parentId ?? null,
+          parentId,
+          order: nextOrder(get().pages, parentId),
           type,
           blocks: opts.blocks ?? (type === 'page' ? emptyBlocks() : []),
           database: opts.database ?? (type === 'database' ? emptyDatabase() : undefined),
@@ -267,9 +303,68 @@ export const useStore = create<AppState>()(
       movePage: (id, parentId) =>
         set((s) => ({
           pages: s.pages.map((p) =>
-            p.id === id ? touch({ ...p, parentId }) : p,
+            p.id === id
+              ? touch({ ...p, parentId, order: nextOrder(s.pages, parentId) })
+              : p,
           ),
         })),
+
+      reorderPage: (id, targetId, position) => {
+        if (id === targetId) return
+        const pages = get().pages
+        const moving = pages.find((p) => p.id === id)
+        const target = pages.find((p) => p.id === targetId)
+        if (!moving || !target || moving.deleted || target.deleted) return
+
+        // prevent nesting under self/descendant
+        const isDescendant = (pid: string, ancestor: string): boolean => {
+          let cur: string | null | undefined = pid
+          const map = new Map(pages.map((p) => [p.id, p.parentId]))
+          while (cur) {
+            if (cur === ancestor) return true
+            cur = map.get(cur) ?? null
+          }
+          return false
+        }
+
+        if (position === 'inside') {
+          if (isDescendant(targetId, id)) return
+          set((s) => ({
+            pages: s.pages.map((p) =>
+              p.id === id
+                ? touch({
+                    ...p,
+                    parentId: targetId,
+                    order: nextOrder(s.pages, targetId),
+                  })
+                : p,
+            ),
+          }))
+          return
+        }
+
+        const parentId = target.parentId
+        if (isDescendant(targetId, id) && parentId === id) return
+        const siblings = pages
+          .filter((p) => !p.deleted && p.parentId === parentId && p.id !== id)
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        const tIdx = siblings.findIndex((p) => p.id === targetId)
+        if (tIdx < 0) return
+        const insertAt = position === 'before' ? tIdx : tIdx + 1
+        siblings.splice(insertAt, 0, { ...moving, parentId })
+        const orderMap = new Map(siblings.map((p, i) => [p.id, i * 1000]))
+        set((s) => ({
+          pages: s.pages.map((p) => {
+            if (p.id === id) {
+              return touch({ ...p, parentId, order: orderMap.get(id) ?? 0 })
+            }
+            if (orderMap.has(p.id)) {
+              return { ...p, order: orderMap.get(p.id)! }
+            }
+            return p
+          }),
+        }))
+      },
 
       duplicatePage: (id) => {
         const src = get().pages.find((p) => p.id === id)
@@ -280,6 +375,7 @@ export const useStore = create<AppState>()(
           id: newId,
           title: `${src.title} (복사본)`,
           favorite: false,
+          order: nextOrder(get().pages, src.parentId),
           createdAt: Date.now(),
           updatedAt: Date.now(),
         }
@@ -329,6 +425,10 @@ export const useStore = create<AppState>()(
         if (type === 'git') {
           newBlock.git = defaultGitMeta()
           newBlock.content = 'Git'
+        }
+        if (type === 'table') {
+          newBlock.table = defaultTableData()
+          newBlock.content = 'table'
         }
         set((s) => ({
           pages: s.pages.map((p) => {
@@ -384,6 +484,10 @@ export const useStore = create<AppState>()(
                 if (type === 'git') {
                   next.git = next.git ?? defaultGitMeta()
                   next.content = next.content || 'Git'
+                }
+                if (type === 'table') {
+                  next.table = next.table ?? defaultTableData()
+                  next.content = next.content || 'table'
                 }
                 return next
               }),
@@ -600,18 +704,18 @@ export const useStore = create<AppState>()(
 
       importWorkspacePages: (pages, snippets, mode = 'replace') => {
         if (!Array.isArray(pages) || pages.length === 0) return
+        const migrated = migratePages(pages)
         if (mode === 'replace') {
           set({
-            pages,
+            pages: migrated,
             snippets: snippets ?? get().snippets,
             versions: [],
             view: { kind: 'home' },
           })
           return
         }
-        // merge: keep existing, add/overwrite by id, map parent refs when possible
         const byId = new Map(get().pages.map((p) => [p.id, p]))
-        for (const p of pages) {
+        for (const p of migrated) {
           byId.set(p.id, { ...p, deleted: false, deletedAt: undefined })
         }
         const mergedSnippets = snippets?.length
@@ -622,7 +726,7 @@ export const useStore = create<AppState>()(
             })()
           : get().snippets
         set({
-          pages: [...byId.values()],
+          pages: migratePages([...byId.values()]),
           snippets: mergedSnippets,
           view: { kind: 'home' },
         })
@@ -630,9 +734,10 @@ export const useStore = create<AppState>()(
 
       resetWorkspace: () =>
         set({
-          pages: createSeedPages(),
+          pages: migratePages(createSeedPages()),
           snippets: createDefaultSnippets(),
           versions: [],
+          settings: defaultSettings(),
           view: { kind: 'home' },
         }),
     }),
@@ -653,6 +758,7 @@ export const useStore = create<AppState>()(
         pages: s.pages,
         snippets: s.snippets,
         versions: s.versions,
+        settings: s.settings,
         theme: s.theme,
         sidebarOpen: s.sidebarOpen,
       }),
@@ -666,13 +772,22 @@ export const useStore = create<AppState>()(
               ? p.snippets
               : current.snippets,
           versions: Array.isArray(p.versions) ? p.versions : [],
-          pages: Array.isArray(p.pages) ? p.pages : current.pages,
+          pages: migratePages(Array.isArray(p.pages) ? p.pages : current.pages),
+          settings: migrateSettings(p.settings),
         }
       },
       onRehydrateStorage: () => (state) => {
         if (state?.theme === 'dark') {
           document.documentElement.classList.add('dark')
         }
+        // purge expired trash after load
+        window.setTimeout(() => {
+          try {
+            useStore.getState().purgeExpiredTrash()
+          } catch {
+            /* ignore */
+          }
+        }, 0)
       },
     },
   ),

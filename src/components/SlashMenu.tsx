@@ -17,6 +17,7 @@ import {
   GitBranch,
   Globe,
   GitBranch as GitIcon,
+  Table,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -43,8 +44,9 @@ export const SLASH_ITEMS: SlashItem[] = [
   { type: 'mermaid', label: 'Mermaid', description: '다이어그램', keywords: 'mermaid diagram 시퀀스 플로우', icon: <GitBranch size={18} /> },
   { type: 'api', label: 'API 엔드포인트', description: 'Method · Path · Request/Response', keywords: 'api endpoint rest http', icon: <Globe size={18} /> },
   { type: 'git', label: 'Git 메타', description: 'repo · branch · PR · issue', keywords: 'git github pr issue commit', icon: <GitIcon size={18} /> },
+  { type: 'table', label: '표', description: '간단한 테이블', keywords: 'table 표 테이블', icon: <Table size={18} /> },
   { type: 'divider', label: '구분선', description: '시각적 구분', keywords: 'divider 구분선 hr', icon: <Minus size={18} /> },
-  { type: 'image', label: '이미지', description: '이미지 URL', keywords: 'image 이미지', icon: <ImageIcon size={18} /> },
+  { type: 'image', label: '이미지', description: 'URL 또는 로컬 업로드', keywords: 'image 이미지 upload', icon: <ImageIcon size={18} /> },
 ]
 
 interface Props {

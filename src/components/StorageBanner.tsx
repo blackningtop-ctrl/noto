@@ -10,8 +10,10 @@ export function StorageBanner() {
   const [info, setInfo] = useState<{ bytes: number; source: string } | null>(null)
   const [dismissed, setDismissed] = useState(false)
   const exportData = useStore((s) => s.exportData)
+  const markBackupNow = useStore((s) => s.markBackupNow)
   const pages = useStore((s) => s.pages)
   const versions = useStore((s) => s.versions)
+  const settings = useStore((s) => s.settings)
 
   useEffect(() => {
     let cancelled = false
@@ -28,7 +30,13 @@ export function StorageBanner() {
     }
   }, [pages, versions])
 
-  if (dismissed || !info || info.bytes < WARN_BYTES) return null
+  const backupOverdue =
+    !settings.lastBackupAt ||
+    Date.now() - settings.lastBackupAt > settings.backupRemindDays * 24 * 60 * 60 * 1000
+
+  if (dismissed || !settings.showStorageBanner) return null
+  if (!info) return null
+  if (info.bytes < WARN_BYTES && !backupOverdue) return null
 
   const danger = info.bytes >= DANGER_BYTES
 
@@ -48,7 +56,9 @@ export function StorageBanner() {
           ({info.source}) · 버전 {versions.length}개
           {danger
             ? ' — 용량이 큽니다. JSON/Vault로 백업 후 휴지통·버전을 정리하세요.'
-            : ' — 주기적으로 백업을 권장합니다.'}
+            : backupOverdue
+              ? ' — 백업 리마인드: JSON 백업을 권장합니다.'
+              : ' — 주기적으로 백업을 권장합니다.'}
         </span>
       </div>
       <button
@@ -62,6 +72,7 @@ export function StorageBanner() {
           a.download = `noto-backup-${new Date().toISOString().slice(0, 10)}.json`
           a.click()
           URL.revokeObjectURL(url)
+          markBackupNow()
         }}
       >
         <Download size={12} /> 백업

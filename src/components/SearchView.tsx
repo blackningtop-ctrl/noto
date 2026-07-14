@@ -1,5 +1,6 @@
 import { useMemo, useEffect, useRef } from 'react'
 import { useStore, useActivePages } from '../store'
+import { searchPages } from '../lib/search'
 import { Search } from 'lucide-react'
 
 export function SearchView() {
@@ -13,18 +14,7 @@ export function SearchView() {
     inputRef.current?.focus()
   }, [])
 
-  const results = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return pages.slice(0, 20)
-    return pages.filter((p) => {
-      const inTitle = p.title.toLowerCase().includes(q)
-      const inBlocks = p.blocks.some((b) => b.content.toLowerCase().includes(q))
-      const inDb = p.database?.rows.some((r) =>
-        Object.values(r.values).some((v) => String(v ?? '').toLowerCase().includes(q)),
-      )
-      return inTitle || inBlocks || inDb
-    })
-  }, [pages, query])
+  const results = useMemo(() => searchPages(pages, query, 50), [pages, query])
 
   return (
     <div className="fade-in mx-auto max-w-2xl px-6 py-12">
@@ -33,27 +23,30 @@ export function SearchView() {
         <input
           ref={inputRef}
           className="w-full border-none bg-transparent outline-none"
-          placeholder="페이지, 블록, 데이터베이스 검색…"
+          placeholder="제목 · 본문 · DB 행 검색 (랭킹)…"
           value={query}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
       </div>
       <div className="space-y-1">
         {results.length === 0 ? (
-          <p className="px-2 py-8 text-center text-sm text-[var(--color-muted)]">검색 결과가 없습니다.</p>
+          <p className="px-2 py-8 text-center text-sm text-[var(--color-muted)]">
+            검색 결과가 없습니다.
+          </p>
         ) : (
-          results.map((p) => (
+          results.map((hit) => (
             <button
-              key={p.id}
+              key={hit.page.id}
               type="button"
-              className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-[var(--color-hover)]"
-              onClick={() => setView({ kind: 'page', pageId: p.id })}
+              className="flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left hover:bg-[var(--color-hover)]"
+              onClick={() => setView({ kind: 'page', pageId: hit.page.id })}
             >
-              <span className="text-xl">{p.icon}</span>
-              <span>
-                <span className="block font-medium">{p.title || '제목 없음'}</span>
-                <span className="block text-xs text-[var(--color-muted)]">
-                  {p.type === 'database' ? '데이터베이스' : '페이지'}
+              <span className="text-xl">{hit.page.icon}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-medium">{hit.page.title || '제목 없음'}</span>
+                <span className="mt-0.5 block truncate text-xs text-[var(--color-muted)]">
+                  {hit.page.type === 'database' ? 'DB' : 'Page'} · {hit.match}
+                  {hit.score > 0 ? ` · score ${hit.score}` : ''} · {hit.snippet}
                 </span>
               </span>
             </button>

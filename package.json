@@ -1,12 +1,13 @@
 {
   "name": "noto",
   "private": true,
-  "version": "1.4.0",
-  "description": "Noto Dev — polished local Notion-style workspace (IDB, undo, DB filter, PWA, export quality)",
+  "version": "2.0.0",
+  "description": "Noto Dev — local-complete Notion-style workspace for developers (no AI, no cloud)",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "test": "vitest run",
     "lint": "oxlint",
     "preview": "vite preview"
   },
@@ -35,6 +36,7 @@
     "tailwindcss": "^4.3.2",
     "typescript": "~6.0.2",
     "vite": "^8.1.1",
-    "vite-plugin-pwa": "^1.3.0"
+    "vite-plugin-pwa": "^1.3.0",
+    "vitest": "^4.1.10"
   }
 }

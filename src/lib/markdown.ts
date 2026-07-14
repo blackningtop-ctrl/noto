@@ -85,6 +85,18 @@ export function blocksToMarkdown(blocks: Block[]): string {
           lines.push(b.content)
         }
         break
+      case 'table':
+        if (b.table?.rows?.length) {
+          const rows = b.table.rows
+          const head = `| ${rows[0].join(' | ')} |`
+          const sep = `| ${rows[0].map(() => '---').join(' | ')} |`
+          const body = rows
+            .slice(b.table.hasHeader ? 1 : 0)
+            .map((r) => `| ${r.join(' | ')} |`)
+            .join('\n')
+          lines.push(b.table.hasHeader ? `${head}\n${sep}\n${body}` : `${head}\n${sep}\n${body}`)
+        }
+        break
       case 'divider':
         lines.push('---')
         break

@@ -12,7 +12,7 @@ export interface TemplateDef {
   icon: string
   keywords: string
   kind: 'page' | 'database'
-  build: () => Omit<Page, 'id' | 'createdAt' | 'updatedAt' | 'deleted' | 'deletedAt' | 'favorite' | 'parentId'>
+  build: () => Omit<Page, 'id' | 'createdAt' | 'updatedAt' | 'deleted' | 'deletedAt' | 'favorite' | 'parentId' | 'order'>
 }
 
 function statusDb(
@@ -20,7 +20,7 @@ function statusDb(
   icon: string,
   extraProps: Database['properties'] = [],
   sampleRows: Array<Record<string, string | number | boolean | null>> = [],
-): Omit<Page, 'id' | 'createdAt' | 'updatedAt' | 'deleted' | 'deletedAt' | 'favorite' | 'parentId'> {
+): Omit<Page, 'id' | 'createdAt' | 'updatedAt' | 'deleted' | 'deletedAt' | 'favorite' | 'parentId' | 'order'> {
   const statusId = uid()
   const options = [
     { id: uid(), name: 'Backlog', color: '#64748b' },

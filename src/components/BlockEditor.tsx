@@ -6,8 +6,10 @@ import { CodeBlock } from './CodeBlock'
 import { MermaidBlock } from './MermaidBlock'
 import { ApiBlock } from './ApiBlock'
 import { GitBlock } from './GitBlock'
+import { TableBlock } from './TableBlock'
+import { LocalImage } from './LocalImage'
 import { WikiText } from './WikiText'
-import { defaultApiEndpoint, defaultGitMeta } from '../types'
+import { defaultApiEndpoint, defaultGitMeta, defaultTableData } from '../types'
 import { GripVertical, Plus, Trash2 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -105,7 +107,8 @@ export function BlockEditor({ pageId, blocks }: Props) {
       block.type === 'code' ||
       block.type === 'mermaid' ||
       block.type === 'api' ||
-      block.type === 'git'
+      block.type === 'git' ||
+      block.type === 'table'
     if (e.key === 'Enter' && !e.shiftKey && !isCodeLike) {
       e.preventDefault()
       const id = addBlock(pageId, block.id, 'paragraph')
@@ -149,6 +152,8 @@ export function BlockEditor({ pageId, blocks }: Props) {
       updateBlock(pageId, slash.blockId, { content: 'API', api: defaultApiEndpoint() })
     } else if (type === 'git') {
       updateBlock(pageId, slash.blockId, { content: 'Git', git: defaultGitMeta() })
+    } else if (type === 'table') {
+      updateBlock(pageId, slash.blockId, { content: 'table', table: defaultTableData() })
     } else {
       updateBlock(pageId, slash.blockId, { content: '' })
     }
@@ -171,7 +176,9 @@ export function BlockEditor({ pageId, blocks }: Props) {
             block.type !== 'code' &&
             block.type !== 'mermaid' &&
             block.type !== 'api' &&
-            block.type !== 'git'
+            block.type !== 'git' &&
+            block.type !== 'table' &&
+            block.type !== 'image'
           }
           onDragStart={() => setDragIndex(index)}
           onDragOver={(e) => e.preventDefault()}
@@ -216,25 +223,15 @@ export function BlockEditor({ pageId, blocks }: Props) {
                 </button>
               </div>
             ) : block.type === 'image' ? (
-              <div className="space-y-2">
-                <input
-                  className="block-input text-sm"
-                  style={{ color: 'var(--color-muted)' }}
-                  placeholder="이미지 URL을 입력하세요…"
-                  value={block.content}
-                  onChange={(e) => updateBlock(pageId, block.id, { content: e.target.value })}
-                />
-                {block.content && (
-                  <img
-                    src={block.content}
-                    alt=""
-                    className="max-h-96 rounded-xl border border-[var(--color-border)] object-contain"
-                    onError={(e) => {
-                      ;(e.target as HTMLImageElement).style.display = 'none'
-                    }}
-                  />
-                )}
-              </div>
+              <LocalImage
+                content={block.content}
+                onChange={(content) => updateBlock(pageId, block.id, { content })}
+              />
+            ) : block.type === 'table' ? (
+              <TableBlock
+                table={block.table ?? defaultTableData()}
+                onChange={(table) => updateBlock(pageId, block.id, { table, content: 'table' })}
+              />
             ) : block.type === 'code' ? (
               <CodeBlock
                 content={block.content}

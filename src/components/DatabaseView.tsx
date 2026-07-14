@@ -1,8 +1,18 @@
 import { useMemo, useState } from 'react'
-import type { Database, DbRow, Page } from '../types'
-import { useStore } from '../store'
+import type { Database, DbRow, Page, Property } from '../types'
+import { useStore, useActivePages } from '../store'
 import { filterAndSortRows, type SortDir, type SortKey } from '../lib/db-query'
-import { Plus, Trash2, LayoutGrid, Table2, Columns3, ArrowUpDown, Search } from 'lucide-react'
+import { evalFormula } from '../lib/formula'
+import {
+  Plus,
+  Trash2,
+  LayoutGrid,
+  Table2,
+  Columns3,
+  ArrowUpDown,
+  Search,
+  CalendarDays,
+} from 'lucide-react'
 import clsx from 'clsx'
 
 interface Props {
@@ -62,17 +72,42 @@ export function DatabaseView({ page }: Props) {
             {v.type === 'table' && <Table2 size={14} />}
             {v.type === 'board' && <Columns3 size={14} />}
             {v.type === 'gallery' && <LayoutGrid size={14} />}
+            {v.type === 'calendar' && <CalendarDays size={14} />}
             {v.name}
           </button>
         ))}
         <div className="flex-1" />
-        <button
-          type="button"
-          className="rounded-lg px-3 py-1.5 text-sm hover:bg-[var(--color-hover)]"
-          onClick={() => addDbProperty(page.id, { name: '새 속성', type: 'text' })}
+        <select
+          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] px-2 py-1.5 text-xs outline-none"
+          defaultValue=""
+          onChange={(e) => {
+            const v = e.target.value as Property['type'] | ''
+            if (!v) return
+            if (v === 'formula') {
+              addDbProperty(page.id, {
+                name: '수식',
+                type: 'formula',
+                formula: 'prop("Points")',
+              })
+            } else if (v === 'relation') {
+              addDbProperty(page.id, { name: '관련 페이지', type: 'relation' })
+            } else {
+              addDbProperty(page.id, { name: '새 속성', type: v })
+            }
+            e.target.value = ''
+          }}
         >
-          + 속성
-        </button>
+          <option value="">+ 속성 추가</option>
+          <option value="text">텍스트</option>
+          <option value="number">숫자</option>
+          <option value="date">날짜</option>
+          <option value="select">선택</option>
+          <option value="status">상태</option>
+          <option value="checkbox">체크박스</option>
+          <option value="url">URL</option>
+          <option value="relation">관계 (페이지)</option>
+          <option value="formula">수식</option>
+        </select>
         <button
           type="button"
           className="inline-flex items-center gap-1 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white"
@@ -141,6 +176,16 @@ export function DatabaseView({ page }: Props) {
         <BoardView page={page} db={db} rows={rows} groupBy={activeView.groupBy} />
       ) : activeView.type === 'gallery' ? (
         <GalleryView page={page} db={db} rows={rows} />
+      ) : activeView.type === 'calendar' ? (
+        <CalendarView
+          page={page}
+          db={db}
+          rows={rows}
+          datePropId={
+            activeView.datePropId ??
+            db.properties.find((p) => p.type === 'date')?.id
+          }
+        />
       ) : (
         <TableView
           page={page}
@@ -198,49 +243,13 @@ function TableView({
               </td>
               {db.properties.map((prop) => (
                 <td key={prop.id}>
-                  {prop.type === 'select' || prop.type === 'status' ? (
-                    <select
-                      value={String(row.values[prop.id] ?? '')}
-                      onChange={(e) => updateDbRow(page.id, row.id, { [prop.id]: e.target.value })}
-                    >
-                      {(prop.options ?? []).map((o) => (
-                        <option key={o.id} value={o.id}>
-                          {o.name}
-                        </option>
-                      ))}
-                    </select>
-                  ) : prop.type === 'checkbox' ? (
-                    <input
-                      type="checkbox"
-                      checked={!!row.values[prop.id]}
-                      onChange={(e) => updateDbRow(page.id, row.id, { [prop.id]: e.target.checked })}
-                    />
-                  ) : prop.type === 'date' ? (
-                    <input
-                      type="date"
-                      value={String(row.values[prop.id] ?? '')}
-                      onChange={(e) => updateDbRow(page.id, row.id, { [prop.id]: e.target.value })}
-                    />
-                  ) : prop.type === 'number' ? (
-                    <input
-                      type="number"
-                      value={
-                        row.values[prop.id] === null || row.values[prop.id] === undefined
-                          ? ''
-                          : String(row.values[prop.id])
-                      }
-                      onChange={(e) =>
-                        updateDbRow(page.id, row.id, {
-                          [prop.id]: e.target.value === '' ? null : Number(e.target.value),
-                        })
-                      }
-                    />
-                  ) : (
-                    <input
-                      value={String(row.values[prop.id] ?? '')}
-                      onChange={(e) => updateDbRow(page.id, row.id, { [prop.id]: e.target.value })}
-                    />
-                  )}
+                  <CellEditor
+                    prop={prop}
+                    row={row}
+                    pageId={page.id}
+                    properties={db.properties}
+                    updateDbRow={updateDbRow}
+                  />
                 </td>
               ))}
               <td>
@@ -263,6 +272,222 @@ function TableView({
           </tr>
         </tbody>
       </table>
+    </div>
+  )
+}
+
+function CellEditor({
+  prop,
+  row,
+  pageId,
+  properties,
+  updateDbRow,
+}: {
+  prop: Property
+  row: DbRow
+  pageId: string
+  properties: Property[]
+  updateDbRow: (
+    pageId: string,
+    rowId: string,
+    values: Record<string, string | number | boolean | string[] | null>,
+  ) => void
+}) {
+  const pages = useActivePages()
+  const setView = useStore((s) => s.setView)
+
+  if (prop.type === 'formula') {
+    const v = evalFormula(prop.formula, row, properties)
+    return <span className="text-sm tabular-nums text-[var(--color-muted)]">{v ?? '—'}</span>
+  }
+
+  if (prop.type === 'relation') {
+    const val = String(row.values[prop.id] ?? '')
+    return (
+      <div className="flex items-center gap-1">
+        <select
+          value={val}
+          onChange={(e) => updateDbRow(pageId, row.id, { [prop.id]: e.target.value || null })}
+        >
+          <option value="">—</option>
+          {pages.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.icon} {p.title || '제목 없음'}
+            </option>
+          ))}
+        </select>
+        {val && (
+          <button
+            type="button"
+            className="text-xs text-[var(--color-accent)]"
+            onClick={() => setView({ kind: 'page', pageId: val })}
+          >
+            열기
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  if (prop.type === 'select' || prop.type === 'status') {
+    return (
+      <select
+        value={String(row.values[prop.id] ?? '')}
+        onChange={(e) => updateDbRow(pageId, row.id, { [prop.id]: e.target.value })}
+      >
+        {(prop.options ?? []).map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.name}
+          </option>
+        ))}
+      </select>
+    )
+  }
+  if (prop.type === 'checkbox') {
+    return (
+      <input
+        type="checkbox"
+        checked={!!row.values[prop.id]}
+        onChange={(e) => updateDbRow(pageId, row.id, { [prop.id]: e.target.checked })}
+      />
+    )
+  }
+  if (prop.type === 'date') {
+    return (
+      <input
+        type="date"
+        value={String(row.values[prop.id] ?? '')}
+        onChange={(e) => updateDbRow(pageId, row.id, { [prop.id]: e.target.value })}
+      />
+    )
+  }
+  if (prop.type === 'number') {
+    return (
+      <input
+        type="number"
+        value={
+          row.values[prop.id] === null || row.values[prop.id] === undefined
+            ? ''
+            : String(row.values[prop.id])
+        }
+        onChange={(e) =>
+          updateDbRow(pageId, row.id, {
+            [prop.id]: e.target.value === '' ? null : Number(e.target.value),
+          })
+        }
+      />
+    )
+  }
+  return (
+    <input
+      value={String(row.values[prop.id] ?? '')}
+      onChange={(e) => updateDbRow(pageId, row.id, { [prop.id]: e.target.value })}
+    />
+  )
+}
+
+function CalendarView({
+  page,
+  rows,
+  datePropId,
+}: {
+  page: Page
+  db: Database
+  rows: DbRow[]
+  datePropId?: string
+}) {
+  const [cursor, setCursor] = useState(() => {
+    const n = new Date()
+    return new Date(n.getFullYear(), n.getMonth(), 1)
+  })
+
+  const byDate = useMemo(() => {
+    const map: Record<string, DbRow[]> = {}
+    if (!datePropId) return map
+    for (const r of rows) {
+      const key = String(r.values[datePropId] ?? '')
+      if (!key) continue
+      if (!map[key]) map[key] = []
+      map[key].push(r)
+    }
+    return map
+  }, [rows, datePropId])
+
+  if (!datePropId) {
+    return (
+      <div className="rounded-xl border border-dashed border-[var(--color-border)] py-12 text-center text-sm text-[var(--color-muted)]">
+        날짜 속성이 필요합니다. 속성을 추가하세요.
+      </div>
+    )
+  }
+
+  const y = cursor.getFullYear()
+  const m = cursor.getMonth()
+  const firstDow = new Date(y, m, 1).getDay()
+  const daysInMonth = new Date(y, m + 1, 0).getDate()
+  const cells: Array<{ day: number | null; dateStr: string | null }> = []
+  for (let i = 0; i < firstDow; i++) cells.push({ day: null, dateStr: null })
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+    cells.push({ day: d, dateStr })
+  }
+
+  return (
+    <div>
+      <div className="mb-3 flex items-center gap-2">
+        <button
+          type="button"
+          className="rounded-lg px-2 py-1 text-sm hover:bg-[var(--color-hover)]"
+          onClick={() => setCursor(new Date(y, m - 1, 1))}
+        >
+          ‹
+        </button>
+        <span className="font-medium">
+          {y}년 {m + 1}월
+        </span>
+        <button
+          type="button"
+          className="rounded-lg px-2 py-1 text-sm hover:bg-[var(--color-hover)]"
+          onClick={() => setCursor(new Date(y, m + 1, 1))}
+        >
+          ›
+        </button>
+      </div>
+      <div className="grid grid-cols-7 gap-1 text-center text-[11px] text-[var(--color-muted)]">
+        {['일', '월', '화', '수', '목', '금', '토'].map((d) => (
+          <div key={d} className="py-1">
+            {d}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {cells.map((c, i) => (
+          <div
+            key={i}
+            className="min-h-[88px] rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] p-1"
+          >
+            {c.day && (
+              <>
+                <div className="mb-1 text-xs font-medium">{c.day}</div>
+                <div className="space-y-0.5">
+                  {(byDate[c.dateStr!] ?? []).map((r) => (
+                    <div
+                      key={r.id}
+                      className="truncate rounded bg-[var(--color-accent-soft)] px-1 py-0.5 text-[10px]"
+                      title={String(r.values.title ?? '')}
+                    >
+                      {String(r.values.title ?? '제목 없음')}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 text-xs text-[var(--color-muted)]">
+        테이블 뷰에서 날짜를 편집하면 「{page.title || '이 DB'}」 캘린더에 반영됩니다.
+      </p>
     </div>
   )
 }

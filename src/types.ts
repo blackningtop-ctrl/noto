@@ -15,6 +15,7 @@ export type BlockType =
   | 'callout'
   | 'image'
   | 'toggle'
+  | 'table'
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS'
 
@@ -40,6 +41,11 @@ export interface GitMeta {
   note: string
 }
 
+export interface TableData {
+  hasHeader: boolean
+  rows: string[][]
+}
+
 export interface Block {
   id: string
   type: BlockType
@@ -50,9 +56,22 @@ export interface Block {
   children?: Block[]
   api?: ApiEndpoint
   git?: GitMeta
+  table?: TableData
+  /** Local blob id for uploaded images: blob:<id> */
+  blobId?: string
 }
 
-export type PropertyType = 'text' | 'number' | 'select' | 'multi_select' | 'date' | 'checkbox' | 'url' | 'status'
+export type PropertyType =
+  | 'text'
+  | 'number'
+  | 'select'
+  | 'multi_select'
+  | 'date'
+  | 'checkbox'
+  | 'url'
+  | 'status'
+  | 'relation'
+  | 'formula'
 
 export interface SelectOption {
   id: string
@@ -65,6 +84,8 @@ export interface Property {
   name: string
   type: PropertyType
   options?: SelectOption[]
+  /** formula expression, e.g. prop("Points") * 2 */
+  formula?: string
 }
 
 export interface DbRow {
@@ -73,13 +94,15 @@ export interface DbRow {
   values: Record<string, string | number | boolean | string[] | null>
 }
 
-export type DbViewType = 'table' | 'board' | 'list' | 'gallery'
+export type DbViewType = 'table' | 'board' | 'list' | 'gallery' | 'calendar'
 
 export interface DbView {
   id: string
   name: string
   type: DbViewType
   groupBy?: string
+  /** calendar date property id */
+  datePropId?: string
 }
 
 export interface Database {
@@ -98,6 +121,8 @@ export interface Page {
   icon: string
   cover?: string
   parentId: string | null
+  /** sibling order among same parent */
+  order: number
   type: PageType
   blocks: Block[]
   database?: Database
@@ -131,6 +156,16 @@ export interface PageVersion {
   auto: boolean
 }
 
+export interface AppSettings {
+  trashRetentionDays: number
+  showStorageBanner: boolean
+  lastBackupAt: number | null
+  backupRemindDays: number
+  schemaVersion: number
+}
+
+export const CURRENT_SCHEMA_VERSION = 3
+
 export type View =
   | { kind: 'home' }
   | { kind: 'page'; pageId: string }
@@ -140,6 +175,7 @@ export type View =
   | { kind: 'graph' }
   | { kind: 'snippets' }
   | { kind: 'export' }
+  | { kind: 'settings' }
 
 export const SELECT_COLORS = [
   '#ef4444',
@@ -185,6 +221,27 @@ export function defaultGitMeta(): GitMeta {
   }
 }
 
+export function defaultTableData(): TableData {
+  return {
+    hasHeader: true,
+    rows: [
+      ['열 1', '열 2', '열 3'],
+      ['', '', ''],
+      ['', '', ''],
+    ],
+  }
+}
+
+export function defaultSettings(): AppSettings {
+  return {
+    trashRetentionDays: 30,
+    showStorageBanner: true,
+    lastBackupAt: null,
+    backupRemindDays: 7,
+    schemaVersion: CURRENT_SCHEMA_VERSION,
+  }
+}
+
 export function gitMetaUrls(git: GitMeta): {
   repoUrl: string
   branchUrl: string
@@ -213,7 +270,6 @@ export function gitMetaUrls(git: GitMeta): {
       commitUrl: git.commit ? `${base}/-/commit/${git.commit}` : null,
     }
   }
-  // bitbucket
   const base = `https://bitbucket.org/${repo}`
   return {
     repoUrl: base,

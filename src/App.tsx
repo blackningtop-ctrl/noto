@@ -10,6 +10,7 @@ import { CommandPalette } from './components/CommandPalette'
 import { GraphView } from './components/GraphView'
 import { SnippetsView } from './components/SnippetsView'
 import { ExportView } from './components/ExportView'
+import { SettingsView } from './components/SettingsView'
 import { StorageBanner } from './components/StorageBanner'
 
 function isTypingTarget(t: EventTarget | null): boolean {
@@ -97,6 +98,7 @@ export default function App() {
           {view.kind === 'graph' && <GraphView />}
           {view.kind === 'snippets' && <SnippetsView />}
           {view.kind === 'export' && <ExportView />}
+          {view.kind === 'settings' && <SettingsView />}
         </main>
       </div>
       <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />

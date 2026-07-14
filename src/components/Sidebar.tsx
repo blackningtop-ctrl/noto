@@ -23,6 +23,7 @@ import {
   Network,
   Code2,
   FolderSync,
+  Settings,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -35,17 +36,23 @@ export function Sidebar() {
   const deletePage = useStore((s) => s.deletePage)
   const toggleFavorite = useStore((s) => s.toggleFavorite)
   const duplicatePage = useStore((s) => s.duplicatePage)
+  const reorderPage = useStore((s) => s.reorderPage)
   const theme = useStore((s) => s.theme)
   const toggleTheme = useStore((s) => s.toggleTheme)
   const exportData = useStore((s) => s.exportData)
   const importData = useStore((s) => s.importData)
+  const markBackupNow = useStore((s) => s.markBackupNow)
   const resetWorkspace = useStore((s) => s.resetWorkspace)
   const setCommandPaletteOpen = useStore((s) => s.setCommandPaletteOpen)
   const pages = useActivePages()
   const favorites = pages.filter((p) => p.favorite)
-  const roots = pages.filter((p) => !p.parentId)
+  const roots = pages
+    .filter((p) => !p.parentId)
+    .slice()
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [menuId, setMenuId] = useState<string | null>(null)
+  const [dragId, setDragId] = useState<string | null>(null)
 
   const childrenOf = useMemo(() => {
     const map: Record<string, Page[]> = {}
@@ -54,6 +61,9 @@ export function Sidebar() {
         if (!map[p.parentId]) map[p.parentId] = []
         map[p.parentId].push(p)
       }
+    }
+    for (const k of Object.keys(map)) {
+      map[k].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
     }
     return map
   }, [pages])
@@ -66,6 +76,7 @@ export function Sidebar() {
     a.download = `noto-backup-${new Date().toISOString().slice(0, 10)}.json`
     a.click()
     URL.revokeObjectURL(url)
+    markBackupNow()
   }
 
   const onImport = () => {
@@ -92,8 +103,33 @@ export function Sidebar() {
             className={clsx(
               'group flex items-center gap-0.5 rounded-lg px-1 py-0.5 text-sm',
               active ? 'bg-[var(--color-hover)] font-medium' : 'hover:bg-[var(--color-hover)]',
+              dragId === page.id && 'opacity-50',
             )}
             style={{ paddingLeft: 4 + depth * 12 }}
+            draggable
+            onDragStart={(e) => {
+              setDragId(page.id)
+              e.dataTransfer.setData('text/page-id', page.id)
+              e.dataTransfer.effectAllowed = 'move'
+            }}
+            onDragEnd={() => setDragId(null)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              const from = e.dataTransfer.getData('text/page-id') || dragId
+              if (!from || from === page.id) return
+              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+              const y = e.clientY - rect.top
+              const third = rect.height / 3
+              if (y < third) reorderPage(from, page.id, 'before')
+              else if (y > third * 2) reorderPage(from, page.id, 'after')
+              else {
+                reorderPage(from, page.id, 'inside')
+                setExpanded((ex) => ({ ...ex, [page.id]: true }))
+              }
+              setDragId(null)
+            }}
           >
             <button
               type="button"
@@ -243,6 +279,12 @@ export function Sidebar() {
           label="Git & Export"
           active={view.kind === 'export'}
           onClick={() => setView({ kind: 'export' })}
+        />
+        <NavItem
+          icon={<Settings size={16} />}
+          label="설정"
+          active={view.kind === 'settings'}
+          onClick={() => setView({ kind: 'settings' })}
         />
         <NavItem
           icon={<Star size={16} />}

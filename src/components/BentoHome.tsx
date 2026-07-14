@@ -29,13 +29,13 @@ export function BentoHome() {
     <div className="fade-in mx-auto max-w-6xl px-6 py-10">
       <header className="mb-8">
         <p className="mb-2 text-sm font-medium text-[var(--color-accent)]">
-          Noto Dev · v1.4 폴리시 · 무료 · 로컬 · 비공개
+          Noto Dev · v2.0 로컬 완성형 · 무료 · 비공개
         </p>
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl">안녕하세요 👋</h1>
         <p className="mt-2 max-w-xl text-[var(--color-muted)]">
-          IndexedDB · Undo · DB 필터 · PWA · export 품질까지 다듬은 개발자 워크스페이스.
+          트리 DnD · 관계/수식/캘린더 · 로컬 이미지 · 랭킹 검색 · 설정 · 테스트까지.
           <span className="mt-1 block text-[var(--color-accent)]">
-            Ctrl+Z 실행취소 · Ctrl+K 팔레트 · Ctrl+E Export
+            AI/클라우드 없이 로컬에서 끝까지 쓰는 워크스페이스
           </span>
         </p>
       </header>
