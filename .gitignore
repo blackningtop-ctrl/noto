@@ -30,3 +30,9 @@ debug-*.png
 debug-*.mjs
 dom.html
 chrome-*.log
+
+# tests
+test-results
+playwright-report
+blob-report
+playwright/.cache
