@@ -30,7 +30,14 @@ import { hasXaiApiKey } from '../lib/ai-key'
 import { isVaultEnabled, subscribeVault } from '../lib/vault'
 import clsx from 'clsx'
 
-export function Sidebar({ onLock }: { onLock?: () => void }) {
+export function Sidebar({
+  onLock,
+  mobile = false,
+}: {
+  onLock?: () => void
+  /** When true, render as overlay drawer (auto-close after navigation). */
+  mobile?: boolean
+}) {
   const [vaultOn, setVaultOn] = useState(() => isVaultEnabled())
   useEffect(() => subscribeVault(() => setVaultOn(isVaultEnabled())), [])
   const open = useStore((s) => s.sidebarOpen)
@@ -55,6 +62,15 @@ export function Sidebar({ onLock }: { onLock?: () => void }) {
   const [menuId, setMenuId] = useState<string | null>(null)
   const [dragId, setDragId] = useState<string | null>(null)
   const [moreOpen, setMoreOpen] = useState(false)
+
+  const go = (next: Parameters<typeof setView>[0]) => {
+    setView(next)
+    if (mobile) setSidebarOpen(false)
+  }
+
+  const afterAction = () => {
+    if (mobile) setSidebarOpen(false)
+  }
 
   const childrenOf = useMemo(() => {
     const map: Record<string, Page[]> = {}
@@ -124,7 +140,7 @@ export function Sidebar({ onLock }: { onLock?: () => void }) {
             <button
               type="button"
               className="flex min-w-0 flex-1 items-center gap-1.5 truncate py-1.5 text-left"
-              onClick={() => setView({ kind: 'page', pageId: page.id })}
+              onClick={() => go({ kind: 'page', pageId: page.id })}
             >
               <span className="text-base leading-none">{page.icon}</span>
               <span className="truncate">{page.title || '제목 없음'}</span>
@@ -191,26 +207,39 @@ export function Sidebar({ onLock }: { onLock?: () => void }) {
       )
     })
 
-  if (!open) {
+  // Desktop collapsed: floating reopen button
+  if (!open && !mobile) {
     return (
       <button
         type="button"
         className="fixed left-3 top-3 z-40 rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] p-2.5 shadow-sm"
         onClick={() => setSidebarOpen(true)}
         title="메뉴 열기"
+        data-testid="desktop-open-sidebar"
       >
         <PanelLeft size={18} />
       </button>
     )
   }
 
-  return (
-    <aside className="sidebar flex h-full w-[268px] shrink-0 flex-col">
-      <div className="flex items-center justify-between px-3 pb-1 pt-3">
+  // Mobile closed: nothing (top bar opens drawer)
+  if (!open && mobile) return null
+
+  const panel = (
+    <aside
+      className={clsx(
+        'sidebar flex h-full w-[min(288px,86vw)] shrink-0 flex-col',
+        mobile && 'sidebar-drawer shadow-2xl',
+      )}
+      data-testid="sidebar"
+      role="navigation"
+      aria-label="사이드 메뉴"
+    >
+      <div className="flex items-center justify-between px-3 pb-1 pt-3 safe-top">
         <button
           type="button"
           className="flex items-center gap-2 rounded-xl px-1.5 py-1 font-semibold tracking-tight hover:bg-[var(--color-hover)]"
-          onClick={() => setView({ kind: 'home' })}
+          onClick={() => go({ kind: 'home' })}
         >
           <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--color-text)] text-sm font-bold text-[var(--color-panel)]">
             N
@@ -219,9 +248,10 @@ export function Sidebar({ onLock }: { onLock?: () => void }) {
         </button>
         <button
           type="button"
-          className="rounded-lg p-1.5 text-[var(--color-muted)] hover:bg-[var(--color-hover)]"
+          className="touch-target rounded-lg p-1.5 text-[var(--color-muted)] hover:bg-[var(--color-hover)]"
           onClick={() => setSidebarOpen(false)}
           title="메뉴 접기"
+          data-testid="sidebar-close"
         >
           <PanelLeftClose size={16} />
         </button>
@@ -230,12 +260,17 @@ export function Sidebar({ onLock }: { onLock?: () => void }) {
       <div className="px-2 pt-1">
         <button
           type="button"
-          onClick={() => setCommandPaletteOpen(true)}
-          className="flex w-full items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-2 text-left text-[13px] text-[var(--color-muted)] shadow-sm transition hover:border-[var(--color-accent)]"
+          onClick={() => {
+            setCommandPaletteOpen(true)
+            afterAction()
+          }}
+          className="flex w-full items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-2.5 text-left text-[13px] text-[var(--color-muted)] shadow-sm transition hover:border-[var(--color-accent)]"
         >
           <Search size={15} />
           <span className="flex-1">찾기…</span>
-          <kbd className="rounded-md bg-[var(--color-hover)] px-1.5 py-0.5 text-[10px]">Ctrl+K</kbd>
+          {!mobile && (
+            <kbd className="rounded-md bg-[var(--color-hover)] px-1.5 py-0.5 text-[10px]">Ctrl+K</kbd>
+          )}
         </button>
       </div>
 
@@ -244,25 +279,25 @@ export function Sidebar({ onLock }: { onLock?: () => void }) {
           icon={<Home size={16} />}
           label="홈"
           active={view.kind === 'home'}
-          onClick={() => setView({ kind: 'home' })}
+          onClick={() => go({ kind: 'home' })}
         />
         <NavItem
           icon={<LayoutTemplate size={16} />}
           label="양식"
           active={view.kind === 'templates'}
-          onClick={() => setView({ kind: 'templates' })}
+          onClick={() => go({ kind: 'templates' })}
         />
         <NavItem
           icon={<Star size={16} />}
           label="즐겨찾기"
           active={view.kind === 'favorites'}
-          onClick={() => setView({ kind: 'favorites' })}
+          onClick={() => go({ kind: 'favorites' })}
         />
         <NavItem
           icon={<Trash2 size={16} />}
           label="휴지통"
           active={view.kind === 'trash'}
-          onClick={() => setView({ kind: 'trash' })}
+          onClick={() => go({ kind: 'trash' })}
         />
       </div>
 
@@ -274,12 +309,12 @@ export function Sidebar({ onLock }: { onLock?: () => void }) {
               key={p.id}
               type="button"
               className={clsx(
-                'flex w-full items-center gap-2 truncate rounded-xl px-2 py-1.5 text-left text-[13px]',
+                'flex w-full items-center gap-2 truncate rounded-xl px-2 py-2 text-left text-[13px]',
                 view.kind === 'page' && view.pageId === p.id
                   ? 'bg-[var(--color-accent-soft)] font-medium'
                   : 'hover:bg-[var(--color-hover)]',
               )}
-              onClick={() => setView({ kind: 'page', pageId: p.id })}
+              onClick={() => go({ kind: 'page', pageId: p.id })}
             >
               <span>{p.icon}</span>
               <span className="truncate">{p.title || '제목 없음'}</span>
@@ -294,37 +329,49 @@ export function Sidebar({ onLock }: { onLock?: () => void }) {
           <button
             type="button"
             title="새 노트"
-            className="rounded-lg p-1.5 text-[var(--color-accent)] hover:bg-[var(--color-accent-soft)]"
-            onClick={() => createPage({ type: 'page' })}
+            className="touch-target rounded-lg p-1.5 text-[var(--color-accent)] hover:bg-[var(--color-accent-soft)]"
+            onClick={() => {
+              createPage({ type: 'page' })
+              afterAction()
+            }}
           >
             <FileText size={15} />
           </button>
           <button
             type="button"
             title="새 표 (목록)"
-            className="rounded-lg p-1.5 text-[var(--color-muted)] hover:bg-[var(--color-hover)]"
-            onClick={() => createPage({ type: 'database' })}
+            className="touch-target rounded-lg p-1.5 text-[var(--color-muted)] hover:bg-[var(--color-hover)]"
+            onClick={() => {
+              createPage({ type: 'database' })
+              afterAction()
+            }}
           >
             <Database size={15} />
           </button>
           <button
             type="button"
             title="새 노트"
-            className="rounded-lg bg-[var(--color-accent)] p-1.5 text-white hover:opacity-90"
-            onClick={() => createPage()}
+            className="touch-target rounded-lg bg-[var(--color-accent)] p-1.5 text-white hover:opacity-90"
+            data-testid="sidebar-new-page"
+            onClick={() => {
+              createPage()
+              afterAction()
+            }}
           >
             <Plus size={15} />
           </button>
         </div>
       </div>
-      <p className="mb-1 px-4 text-[11px] text-[var(--color-muted)]">끌어다 놓으면 순서·폴더를 바꿀 수 있어요</p>
+      <p className="mb-1 px-4 text-[11px] text-[var(--color-muted)]">
+        {mobile ? '노트를 눌러 열어 보세요' : '끌어다 놓으면 순서·폴더를 바꿀 수 있어요'}
+      </p>
 
       <div className="mt-0.5 flex-1 overflow-y-auto px-2 pb-2">{renderTree(roots)}</div>
 
-      <div className="border-t border-[var(--color-border)] p-2">
+      <div className="border-t border-[var(--color-border)] p-2 safe-bottom">
         <button
           type="button"
-          className="flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left text-[13px] text-[var(--color-muted)] hover:bg-[var(--color-hover)]"
+          className="flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-[13px] text-[var(--color-muted)] hover:bg-[var(--color-hover)]"
           onClick={() => setMoreOpen((v) => !v)}
         >
           <HelpCircle size={15} />
@@ -337,31 +384,31 @@ export function Sidebar({ onLock }: { onLock?: () => void }) {
               icon={<Sparkles size={15} />}
               label={hasXaiApiKey() ? 'AI 설정' : 'AI 켜기 (API 키)'}
               active={view.kind === 'settings'}
-              onClick={() => setView({ kind: 'settings' })}
+              onClick={() => go({ kind: 'settings' })}
             />
             <NavItem
               icon={<Network size={15} />}
               label="연결 보기"
               active={view.kind === 'graph'}
-              onClick={() => setView({ kind: 'graph' })}
+              onClick={() => go({ kind: 'graph' })}
             />
             <NavItem
               icon={<Code2 size={15} />}
               label="코드 모음"
               active={view.kind === 'snippets'}
-              onClick={() => setView({ kind: 'snippets' })}
+              onClick={() => go({ kind: 'snippets' })}
             />
             <NavItem
               icon={<FolderOutput size={15} />}
               label="내보내기 / 백업"
               active={view.kind === 'export'}
-              onClick={() => setView({ kind: 'export' })}
+              onClick={() => go({ kind: 'export' })}
             />
             <NavItem
               icon={<Settings size={15} />}
               label="설정"
               active={view.kind === 'settings'}
-              onClick={() => setView({ kind: 'settings' })}
+              onClick={() => go({ kind: 'settings' })}
             />
             <NavItem
               icon={theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
@@ -372,13 +419,30 @@ export function Sidebar({ onLock }: { onLock?: () => void }) {
               <NavItem
                 icon={<Lock size={15} />}
                 label="지금 잠그기"
-                onClick={onLock}
+                onClick={() => {
+                  onLock()
+                  afterAction()
+                }}
               />
             )}
           </div>
         )}
       </div>
     </aside>
+  )
+
+  if (!mobile) return panel
+
+  return (
+    <div className="sidebar-overlay" data-testid="sidebar-overlay">
+      <button
+        type="button"
+        className="sidebar-backdrop"
+        aria-label="메뉴 닫기"
+        onClick={() => setSidebarOpen(false)}
+      />
+      {panel}
+    </div>
   )
 }
 
@@ -417,7 +481,7 @@ function NavItem({
       type="button"
       onClick={onClick}
       className={clsx(
-        'flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left text-[13px]',
+        'flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-[13px]',
         active
           ? 'bg-[var(--color-accent-soft)] font-medium text-[var(--color-accent)]'
           : 'hover:bg-[var(--color-hover)]',

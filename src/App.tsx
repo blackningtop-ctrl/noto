@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useStore, undoWorkspace, redoWorkspace } from './store'
 import { Sidebar } from './components/Sidebar'
+import { MobileTopBar } from './components/MobileTopBar'
 import { BentoHome } from './components/BentoHome'
 import { PageView } from './components/PageView'
 import { SearchView } from './components/SearchView'
@@ -14,6 +15,7 @@ import { SettingsView } from './components/SettingsView'
 import { TemplatesView } from './components/TemplatesView'
 import { StorageBanner } from './components/StorageBanner'
 import { VaultLockScreen } from './components/VaultLockScreen'
+import { useIsMobile } from './lib/use-media-query'
 import {
   getAutoLockMinutes,
   getVaultIdleMs,
@@ -55,12 +57,19 @@ export default function App() {
   const theme = useStore((s) => s.theme)
   const commandPaletteOpen = useStore((s) => s.commandPaletteOpen)
   const setCommandPaletteOpen = useStore((s) => s.setCommandPaletteOpen)
+  const setSidebarOpen = useStore((s) => s.setSidebarOpen)
+  const isMobile = useIsMobile()
 
   const [booting, setBooting] = useState(true)
   const [locked, setLocked] = useState(false)
   const [vaultTick, setVaultTick] = useState(0)
 
   useEffect(() => subscribeVault(() => setVaultTick((n) => n + 1)), [])
+
+  // Phone: start with drawer closed so content has full width
+  useEffect(() => {
+    if (isMobile) setSidebarOpen(false)
+  }, [isMobile, setSidebarOpen])
 
   useEffect(() => {
     let cancelled = false
@@ -203,25 +212,29 @@ export default function App() {
     )
   }
 
+  const lockNow = () => {
+    if (!isVaultEnabled()) return
+    lockVault()
+    wipeSensitiveMemory()
+    setLocked(true)
+    setCommandPaletteOpen(false)
+  }
+
   return (
     <div
-      className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden"
-      style={{ background: 'var(--color-surface)', minHeight: '100vh' }}
+      className="app-shell flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden"
+      style={{ background: 'var(--color-surface)', minHeight: '100dvh' }}
+      data-testid="app-shell"
+      data-mobile={isMobile ? '1' : '0'}
     >
       <StorageBanner />
+      {isMobile && <MobileTopBar onOpenMenu={() => setSidebarOpen(true)} />}
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <Sidebar
-          onLock={() => {
-            if (!isVaultEnabled()) return
-            lockVault()
-            wipeSensitiveMemory()
-            setLocked(true)
-            setCommandPaletteOpen(false)
-          }}
-        />
+        <Sidebar mobile={isMobile} onLock={lockNow} />
         <main
           className="min-h-0 min-w-0 flex-1 overflow-y-auto"
           style={{ background: 'var(--color-panel)' }}
+          data-testid="main-content"
         >
           {view.kind === 'home' && <BentoHome />}
           {view.kind === 'page' && <PageView pageId={view.pageId} />}

@@ -49,10 +49,12 @@ export function BentoHome() {
   const favorites = pages.filter((p) => p.favorite).slice(0, 4)
 
   return (
-    <div className="fade-in mx-auto max-w-4xl px-5 py-8 md:px-8 md:py-12">
+    <div className="fade-in mx-auto max-w-4xl px-5 py-8 md:px-8 md:py-12" data-testid="home-view">
       <header className="mb-8">
         <p className="mb-1 text-sm font-medium text-[var(--color-accent)]">무료 노트 앱 · 내 컴퓨터에만 저장</p>
-        <h1 className="text-3xl font-bold tracking-tight md:text-[2rem]">안녕! 무엇을 적을까? ✏️</h1>
+        <h1 className="text-3xl font-bold tracking-tight md:text-[2rem]" data-testid="home-title">
+          안녕! 무엇을 적을까? ✏️
+        </h1>
         <p className="mt-2 max-w-lg text-[15px] leading-relaxed text-[var(--color-muted)]">
           수업 정리, 일기, 할 일 목록을 만들 수 있어요. 복잡하게 쓰지 않아도 괜찮아요.
         </p>

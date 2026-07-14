@@ -1,13 +1,15 @@
 {
   "name": "noto",
   "private": true,
-  "version": "2.2.0",
-  "description": "Noto Dev — local Notion-style workspace with TipTap rich editor + optional SpaceXAI",
+  "version": "2.3.0",
+  "description": "Noto Dev — local Notion-style workspace with TipTap, vault, mobile shell, SpaceXAI",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install chromium",
     "lint": "oxlint",
     "preview": "vite preview"
   },
@@ -40,6 +42,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^6.0.3",
+    "@playwright/test": "^1.58.2",
     "oxlint": "^1.71.0",
     "tailwindcss": "^4.3.2",
     "typescript": "~6.0.2",

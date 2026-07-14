@@ -40,11 +40,13 @@
 | **설정** | 휴지통 보관일 · 백업 리마인드 · 만료 정리 |
 | **Export** | Vault/정적 사이트 · 위키링크·Mermaid · 병합 import |
 | **PWA** | 설치 · 오프라인 |
-| **테스트** | `npm test` (search/formula/slug) |
+| **금고** | 비밀번호 잠금 · AES-GCM · 자동 잠금 (`Ctrl+L`) |
+| **모바일** | 드로어 메뉴 · 상단 바 · 세이프 에어리어 · PWA 설치 |
+| **테스트** | `npm test` (단위) · `npm run test:e2e` (Playwright) |
 
-> AI/클라우드 협업은 의도적으로 제외. 로컬 단일 사용자 기준으로 완성.
+> 선택 AI(SpaceXAI)는 API 키가 있을 때만 동작. 노트 본문은 로컬 금고로 암호화 가능.
 
-데이터가 **localStorage**에만 저장됩니다.
+데이터는 **IndexedDB**(+ 금고 시 AES-GCM)에 저장됩니다.
 
 ## 시작하기
 
@@ -58,6 +60,9 @@ npm run dev
 ```bash
 npm run build    # 프로덕션 빌드
 npm run preview  # 빌드 미리보기
+npm test         # 단위 테스트 (vitest)
+npm run test:e2e:install  # Playwright 브라우저 (최초 1회)
+npm run test:e2e          # E2E 스모크 (데스크톱+모바일)
 ```
 
 ## 기술 스택

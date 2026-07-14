@@ -64,6 +64,69 @@ button, input, textarea, select {
   border-right: 1px solid var(--color-border);
 }
 
+/* Mobile drawer */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+}
+
+.sidebar-backdrop {
+  flex: 1;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.38);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sidebar-drawer {
+  border-right: 1px solid var(--color-border);
+  animation: drawer-in 0.18s ease-out;
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(-12px);
+    opacity: 0.85;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.mobile-topbar {
+  padding-top: max(0.35rem, env(safe-area-inset-top));
+  padding-left: max(0.35rem, env(safe-area-inset-left));
+  padding-right: max(0.35rem, env(safe-area-inset-right));
+}
+
+.safe-top {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+}
+
+.safe-bottom {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+.touch-target {
+  min-width: 40px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Prefer larger tap targets on coarse pointers */
+@media (pointer: coarse) {
+  .block-handle {
+    opacity: 0.55;
+  }
+}
+
 /* Bento / cards — quieter motion */
 .bento {
   display: grid;
