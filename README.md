@@ -50,6 +50,21 @@
 
 ## 시작하기
 
+### Windows — 더블클릭 한 번
+
+| 파일 | 용도 |
+|------|------|
+| **`시작.bat`** (이 폴더) | 이미 받은 프로젝트에서 서버 실행 |
+| **바탕화면 `Noto시작.bat`** | 다른 PC에서도: 없으면 clone → install → 실행 |
+
+다른 컴퓨터로 옮길 때:
+1. GitHub 로그인 가능한지 확인 (비공개 저장소 `blackningtop-ctrl/noto`)
+2. `Noto시작.bat` 을 USB/메일로 가져가 바탕화면에 두고 **더블클릭**
+3. Node/Git 없으면 winget으로 설치를 시도합니다
+4. 브라우저가 `http://localhost:5173` 을 엽니다
+
+### 수동 (터미널)
+
 ```bash
 npm install
 npm run dev
