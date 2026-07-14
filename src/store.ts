@@ -19,7 +19,7 @@ import { createSeedPages } from './lib/seed'
 import { uid } from './lib/id'
 import { getTemplate } from './lib/templates'
 import { createDefaultSnippets } from './lib/snippets'
-import { createIdbStorage } from './lib/idb-storage'
+import { createIdbStorage, flushWorkspaceToStorage } from './lib/idb-storage'
 import { migratePages, migrateSettings } from './lib/migrate'
 
 const MAX_VERSIONS_PER_PAGE = 20
@@ -754,6 +754,7 @@ export const useStore = create<AppState>()(
     {
       name: 'noto-workspace-v1',
       storage: createIdbStorage(),
+      skipHydration: true,
       partialize: (s) => ({
         pages: s.pages,
         snippets: s.snippets,
@@ -799,6 +800,19 @@ export function undoWorkspace() {
 
 export function redoWorkspace() {
   useStore.temporal.getState().redo()
+}
+
+/** Immediately persist partialized workspace (re-encrypt after vault enable/change). */
+export async function flushWorkspacePersist(): Promise<void> {
+  const s = useStore.getState()
+  await flushWorkspaceToStorage({
+    pages: s.pages,
+    snippets: s.snippets,
+    versions: s.versions,
+    settings: s.settings,
+    theme: s.theme,
+    sidebarOpen: s.sidebarOpen,
+  })
 }
 
 /** Avoid filtering inside useStore selectors — new arrays break React getSnapshot. */

@@ -1,8 +1,27 @@
 import { useEffect, useState } from 'react'
-import { useStore } from '../store'
-import { Settings, Trash2, Download, Shield, Sparkles, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { useStore, flushWorkspacePersist } from '../store'
+import {
+  Settings,
+  Trash2,
+  Download,
+  Shield,
+  Sparkles,
+  Eye,
+  EyeOff,
+  Loader2,
+  Lock,
+  KeyRound,
+} from 'lucide-react'
 import { getXaiApiKey, setXaiApiKey, maskKey } from '../lib/ai-key'
 import { AI_MODELS, DEFAULT_AI_MODEL, testXaiConnection } from '../lib/xai'
+import {
+  changeVaultPassword,
+  disableVault,
+  enableVault,
+  getAutoLockMinutes,
+  isVaultEnabled,
+  setAutoLockMinutes,
+} from '../lib/vault'
 
 export function SettingsView() {
   const settings = useStore((s) => s.settings)
@@ -19,6 +38,17 @@ export function SettingsView() {
   const [testMsg, setTestMsg] = useState<string | null>(null)
   const [testing, setTesting] = useState(false)
 
+  // vault UI
+  const [vaultOn, setVaultOn] = useState(() => isVaultEnabled())
+  const [vaultPw, setVaultPw] = useState('')
+  const [vaultPw2, setVaultPw2] = useState('')
+  const [vaultOldPw, setVaultOldPw] = useState('')
+  const [vaultNewPw, setVaultNewPw] = useState('')
+  const [vaultBusy, setVaultBusy] = useState(false)
+  const [vaultMsg, setVaultMsg] = useState<string | null>(null)
+  const [autoLock, setAutoLock] = useState(() => getAutoLockMinutes())
+  const [showVaultPw, setShowVaultPw] = useState(false)
+
   useEffect(() => {
     setApiKey(getXaiApiKey())
   }, [])
@@ -34,6 +64,84 @@ export function SettingsView() {
     markBackupNow()
   }
 
+  const onEnableVault = async () => {
+    setVaultMsg(null)
+    if (vaultPw.length < 4) {
+      setVaultMsg('비밀번호는 4자 이상이어야 해요.')
+      return
+    }
+    if (vaultPw !== vaultPw2) {
+      setVaultMsg('비밀번호 확인이 달라요.')
+      return
+    }
+    setVaultBusy(true)
+    try {
+      await enableVault(vaultPw)
+      await flushWorkspacePersist()
+      setVaultOn(true)
+      setAutoLock(getAutoLockMinutes())
+      setVaultPw('')
+      setVaultPw2('')
+      setVaultMsg('금고가 켜졌어요. 노트가 암호화되어 저장됩니다.')
+    } catch (e) {
+      setVaultMsg(e instanceof Error ? e.message : '금고를 켤 수 없어요.')
+    } finally {
+      setVaultBusy(false)
+    }
+  }
+
+  const onChangeVaultPw = async () => {
+    setVaultMsg(null)
+    if (vaultNewPw.length < 4) {
+      setVaultMsg('새 비밀번호는 4자 이상이어야 해요.')
+      return
+    }
+    setVaultBusy(true)
+    try {
+      await changeVaultPassword(vaultOldPw, vaultNewPw)
+      await flushWorkspacePersist()
+      setVaultOldPw('')
+      setVaultNewPw('')
+      setVaultMsg('비밀번호를 바꿨어요. 노트가 새 키로 다시 암호화됐어요.')
+    } catch (e) {
+      setVaultMsg(e instanceof Error ? e.message : '비밀번호 변경 실패')
+    } finally {
+      setVaultBusy(false)
+    }
+  }
+
+  const onDisableVault = async () => {
+    setVaultMsg(null)
+    if (!vaultOldPw) {
+      setVaultMsg('해제를 위해 현재 비밀번호를 입력해 주세요.')
+      return
+    }
+    if (!confirm('금고를 끄면 노트가 다시 암호화 없이 저장돼요. 계속할까요?')) return
+    setVaultBusy(true)
+    try {
+      await disableVault(vaultOldPw)
+      await flushWorkspacePersist()
+      setVaultOn(false)
+      setVaultOldPw('')
+      setVaultNewPw('')
+      setVaultMsg('금고를 껐어요. 노트는 이 브라우저에 일반 저장됩니다.')
+    } catch (e) {
+      setVaultMsg(e instanceof Error ? e.message : '금고 해제 실패')
+    } finally {
+      setVaultBusy(false)
+    }
+  }
+
+  const onAutoLockChange = async (mins: number) => {
+    setAutoLock(mins)
+    await setAutoLockMinutes(mins)
+    setVaultMsg(
+      mins <= 0
+        ? '자동 잠금을 껐어요. (Ctrl+L 또는 사이드바에서 수동 잠금 가능)'
+        : `${mins}분 동안 안 쓰면 자동으로 잠겨요.`,
+    )
+  }
+
   return (
     <div className="fade-in mx-auto max-w-2xl px-6 py-10">
       <div className="mb-2 flex items-center gap-2 text-sm font-medium text-[var(--color-accent)]">
@@ -45,6 +153,133 @@ export function SettingsView() {
       </p>
 
       <section className="mt-8 space-y-4">
+        {/* Vault */}
+        <div className="rounded-2xl border border-[var(--color-border)] p-4">
+          <h2 className="mb-1 flex items-center gap-2 font-semibold">
+            <Lock size={16} className="text-[var(--color-accent)]" /> 금고 (비밀번호 잠금)
+          </h2>
+          <p className="mb-3 text-xs leading-relaxed text-[var(--color-muted)]">
+            비밀번호로 노트를 암호화해요 (AES-256-GCM). 비밀번호는 서버로 보내지 않고 이 기기에만
+            있어요. 잊으면 노트를 복구할 수 없어요.
+          </p>
+
+          {vaultOn ? (
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-accent-soft)] px-2.5 py-1 text-xs font-medium text-[var(--color-accent)]">
+                <KeyRound size={12} /> 금고 켜짐 · 저장 시 암호화
+              </div>
+
+              <label className="flex items-center justify-between gap-4 text-sm">
+                <span>자동 잠금 (분)</span>
+                <select
+                  className="rounded-lg border border-[var(--color-border)] bg-[var(--color-panel)] px-2 py-1.5 text-sm outline-none"
+                  value={autoLock}
+                  onChange={(e) => void onAutoLockChange(Number(e.target.value))}
+                >
+                  <option value={0}>끔</option>
+                  <option value={5}>5분</option>
+                  <option value={15}>15분</option>
+                  <option value={30}>30분</option>
+                  <option value={60}>60분</option>
+                </select>
+              </label>
+              <p className="text-[11px] text-[var(--color-muted)]">
+                수동 잠금: <kbd className="rounded border border-[var(--color-border)] px-1">Ctrl</kbd>
+                +
+                <kbd className="rounded border border-[var(--color-border)] px-1">L</kbd> 또는
+                사이드바 「지금 잠그기」
+              </p>
+
+              <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-hover)]/30 p-3">
+                <p className="mb-2 text-xs font-medium">비밀번호 변경</p>
+                <input
+                  type={showVaultPw ? 'text' : 'password'}
+                  className="mb-2 w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+                  placeholder="현재 비밀번호"
+                  value={vaultOldPw}
+                  onChange={(e) => setVaultOldPw(e.target.value)}
+                  autoComplete="current-password"
+                />
+                <input
+                  type={showVaultPw ? 'text' : 'password'}
+                  className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+                  placeholder="새 비밀번호 (4자 이상)"
+                  value={vaultNewPw}
+                  onChange={(e) => setVaultNewPw(e.target.value)}
+                  autoComplete="new-password"
+                />
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={vaultBusy}
+                    className="rounded-xl bg-[var(--color-accent)] px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+                    onClick={() => void onChangeVaultPw()}
+                  >
+                    {vaultBusy ? <Loader2 size={14} className="inline animate-spin" /> : null} 변경
+                  </button>
+                  <button
+                    type="button"
+                    disabled={vaultBusy}
+                    className="rounded-xl px-3 py-2 text-sm text-[var(--color-danger)] hover:bg-[var(--color-hover)] disabled:opacity-50"
+                    onClick={() => void onDisableVault()}
+                  >
+                    금고 끄기
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-xl border border-[var(--color-border)] px-2.5 py-2 text-sm hover:bg-[var(--color-hover)]"
+                    onClick={() => setShowVaultPw((v) => !v)}
+                    title={showVaultPw ? '숨기기' : '보기'}
+                  >
+                    {showVaultPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <input
+                type={showVaultPw ? 'text' : 'password'}
+                className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+                placeholder="새 비밀번호 (4자 이상)"
+                value={vaultPw}
+                onChange={(e) => setVaultPw(e.target.value)}
+                autoComplete="new-password"
+              />
+              <div className="flex gap-2">
+                <input
+                  type={showVaultPw ? 'text' : 'password'}
+                  className="min-w-0 flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-panel)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+                  placeholder="비밀번호 확인"
+                  value={vaultPw2}
+                  onChange={(e) => setVaultPw2(e.target.value)}
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  className="rounded-xl border border-[var(--color-border)] px-2.5 hover:bg-[var(--color-hover)]"
+                  onClick={() => setShowVaultPw((v) => !v)}
+                >
+                  {showVaultPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              <button
+                type="button"
+                disabled={vaultBusy}
+                className="mt-1 inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-accent)] px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+                onClick={() => void onEnableVault()}
+              >
+                {vaultBusy ? <Loader2 size={14} className="animate-spin" /> : <Lock size={14} />}
+                금고 켜기
+              </button>
+            </div>
+          )}
+
+          {vaultMsg && (
+            <p className="mt-3 text-xs leading-relaxed text-[var(--color-muted)]">{vaultMsg}</p>
+          )}
+        </div>
+
         <div className="rounded-2xl border border-[var(--color-border)] p-4">
           <h2 className="mb-1 flex items-center gap-2 font-semibold">
             <Sparkles size={16} className="text-[var(--color-accent)]" /> AI (SpaceXAI / xAI)
@@ -230,6 +465,11 @@ export function SettingsView() {
           >
             JSON 백업 다운로드
           </button>
+          {vaultOn && (
+            <p className="mt-2 text-[11px] text-[var(--color-muted)]">
+              참고: 백업 JSON은 열리면 평문이에요. 안전한 곳에 두세요.
+            </p>
+          )}
         </div>
 
         <div className="rounded-2xl border border-[var(--color-border)] p-4">
@@ -246,6 +486,7 @@ export function SettingsView() {
           </label>
           <p className="mt-3 text-xs text-[var(--color-muted)]">
             스키마 버전 {settings.schemaVersion} · 페이지 {pages.filter((p) => !p.deleted).length}개
+            {vaultOn ? ' · 금고 활성' : ''}
           </p>
         </div>
       </section>

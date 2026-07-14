@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useStore, useActivePages } from '../store'
 import type { Page } from '../types'
 import {
@@ -24,11 +24,15 @@ import {
   HelpCircle,
   LayoutTemplate,
   Sparkles,
+  Lock,
 } from 'lucide-react'
 import { hasXaiApiKey } from '../lib/ai-key'
+import { isVaultEnabled, subscribeVault } from '../lib/vault'
 import clsx from 'clsx'
 
-export function Sidebar() {
+export function Sidebar({ onLock }: { onLock?: () => void }) {
+  const [vaultOn, setVaultOn] = useState(() => isVaultEnabled())
+  useEffect(() => subscribeVault(() => setVaultOn(isVaultEnabled())), [])
   const open = useStore((s) => s.sidebarOpen)
   const setSidebarOpen = useStore((s) => s.setSidebarOpen)
   const view = useStore((s) => s.view)
@@ -364,6 +368,13 @@ export function Sidebar() {
               label={theme === 'dark' ? '밝은 화면' : '어두운 화면'}
               onClick={toggleTheme}
             />
+            {vaultOn && onLock && (
+              <NavItem
+                icon={<Lock size={15} />}
+                label="지금 잠그기"
+                onClick={onLock}
+              />
+            )}
           </div>
         )}
       </div>
