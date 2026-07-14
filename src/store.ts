@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { temporal } from 'zundo'
 import type {
   Block,
   BlockType,
@@ -17,6 +18,7 @@ import { createSeedPages } from './lib/seed'
 import { uid } from './lib/id'
 import { getTemplate } from './lib/templates'
 import { createDefaultSnippets } from './lib/snippets'
+import { createIdbStorage } from './lib/idb-storage'
 
 const MAX_VERSIONS_PER_PAGE = 20
 const AUTO_SNAPSHOT_MS = 30_000
@@ -81,7 +83,11 @@ interface AppState {
 
   exportData: () => string
   importData: (json: string) => boolean
-  importWorkspacePages: (pages: Page[], snippets?: Snippet[]) => void
+  importWorkspacePages: (
+    pages: Page[],
+    snippets?: Snippet[],
+    mode?: 'replace' | 'merge',
+  ) => void
   resetWorkspace: () => void
 }
 
@@ -127,6 +133,7 @@ function emptyDatabase(): Database {
 
 export const useStore = create<AppState>()(
   persist(
+    temporal(
     (set, get) => ({
       pages: createSeedPages(),
       snippets: createDefaultSnippets(),
@@ -591,12 +598,32 @@ export const useStore = create<AppState>()(
         }
       },
 
-      importWorkspacePages: (pages, snippets) => {
+      importWorkspacePages: (pages, snippets, mode = 'replace') => {
         if (!Array.isArray(pages) || pages.length === 0) return
+        if (mode === 'replace') {
+          set({
+            pages,
+            snippets: snippets ?? get().snippets,
+            versions: [],
+            view: { kind: 'home' },
+          })
+          return
+        }
+        // merge: keep existing, add/overwrite by id, map parent refs when possible
+        const byId = new Map(get().pages.map((p) => [p.id, p]))
+        for (const p of pages) {
+          byId.set(p.id, { ...p, deleted: false, deletedAt: undefined })
+        }
+        const mergedSnippets = snippets?.length
+          ? (() => {
+              const map = new Map(get().snippets.map((s) => [s.id, s]))
+              for (const s of snippets) map.set(s.id, s)
+              return [...map.values()]
+            })()
+          : get().snippets
         set({
-          pages,
-          snippets: snippets ?? get().snippets,
-          versions: [],
+          pages: [...byId.values()],
+          snippets: mergedSnippets,
           view: { kind: 'home' },
         })
       },
@@ -610,7 +637,18 @@ export const useStore = create<AppState>()(
         }),
     }),
     {
+      limit: 40,
+      partialize: (s) => {
+        const { pages, snippets } = s
+        return { pages, snippets } as AppState
+      },
+      equality: (a, b) =>
+        a.pages === b.pages && a.snippets === b.snippets,
+    },
+    ),
+    {
       name: 'noto-workspace-v1',
+      storage: createIdbStorage(),
       partialize: (s) => ({
         pages: s.pages,
         snippets: s.snippets,
@@ -639,6 +677,14 @@ export const useStore = create<AppState>()(
     },
   ),
 )
+
+export function undoWorkspace() {
+  useStore.temporal.getState().undo()
+}
+
+export function redoWorkspace() {
+  useStore.temporal.getState().redo()
+}
 
 /** Avoid filtering inside useStore selectors — new arrays break React getSnapshot. */
 export function useActivePages() {

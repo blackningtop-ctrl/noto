@@ -259,6 +259,11 @@ button, input, textarea, select {
   background: color-mix(in srgb, var(--color-accent) 20%, transparent);
 }
 
+.wiki-link-missing {
+  border-bottom-style: dashed;
+  opacity: 0.85;
+}
+
 /* Command palette */
 .cmd-overlay {
   position: fixed;

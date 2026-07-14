@@ -34,8 +34,15 @@ class ErrorBoundary extends Component<
           <button
             type="button"
             style={{ marginTop: 16, padding: '8px 14px', cursor: 'pointer' }}
-            onClick={() => {
+            onClick={async () => {
               localStorage.removeItem('noto-workspace-v1')
+              localStorage.removeItem('noto-workspace-v1__meta')
+              try {
+                const { del } = await import('idb-keyval')
+                await del('noto-workspace-v1')
+              } catch {
+                /* ignore */
+              }
               location.reload()
             }}
           >

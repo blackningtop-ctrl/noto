@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
-import type { Database, Page } from '../types'
+import { useMemo, useState } from 'react'
+import type { Database, DbRow, Page } from '../types'
 import { useStore } from '../store'
-import { Plus, Trash2, LayoutGrid, Table2, Columns3 } from 'lucide-react'
+import { filterAndSortRows, type SortDir, type SortKey } from '../lib/db-query'
+import { Plus, Trash2, LayoutGrid, Table2, Columns3, ArrowUpDown, Search } from 'lucide-react'
 import clsx from 'clsx'
 
 interface Props {
@@ -16,11 +17,36 @@ export function DatabaseView({ page }: Props) {
   const deleteDbRow = useStore((s) => s.deleteDbRow)
   const addDbProperty = useStore((s) => s.addDbProperty)
 
+  const [query, setQuery] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey>('none')
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
+  const [statusFilter, setStatusFilter] = useState('')
+
   const activeView = db.views.find((v) => v.id === db.activeViewId) ?? db.views[0]
+  const statusProp =
+    db.properties.find((p) => p.type === 'status') ??
+    db.properties.find((p) => p.type === 'select')
+
+  const propFilters = useMemo(() => {
+    const f: Record<string, string> = {}
+    if (statusFilter && statusProp) f[statusProp.id] = statusFilter
+    return f
+  }, [statusFilter, statusProp])
+
+  const rows = useMemo(
+    () =>
+      filterAndSortRows(db, {
+        query,
+        sortKey,
+        sortDir,
+        propFilters,
+      }),
+    [db, query, sortKey, sortDir, propFilters],
+  )
 
   return (
     <div className="mx-auto w-full max-w-6xl px-6 pb-24">
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         {db.views.map((v) => (
           <button
             key={v.id}
@@ -29,8 +55,8 @@ export function DatabaseView({ page }: Props) {
             className={clsx(
               'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm transition',
               v.id === activeView.id
-                ? 'bg-[var(--color-accent-soft)] text-[var(--color-accent)] font-medium'
-                : 'hover:bg-[var(--color-hover)] text-[var(--color-muted)]',
+                ? 'bg-[var(--color-accent-soft)] font-medium text-[var(--color-accent)]'
+                : 'text-[var(--color-muted)] hover:bg-[var(--color-hover)]',
             )}
           >
             {v.type === 'table' && <Table2 size={14} />}
@@ -43,12 +69,7 @@ export function DatabaseView({ page }: Props) {
         <button
           type="button"
           className="rounded-lg px-3 py-1.5 text-sm hover:bg-[var(--color-hover)]"
-          onClick={() =>
-            addDbProperty(page.id, {
-              name: '새 속성',
-              type: 'text',
-            })
-          }
+          onClick={() => addDbProperty(page.id, { name: '새 속성', type: 'text' })}
         >
           + 속성
         </button>
@@ -61,12 +82,74 @@ export function DatabaseView({ page }: Props) {
         </button>
       </div>
 
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-hover)] p-2">
+        <div className="flex min-w-[180px] flex-1 items-center gap-2 rounded-lg bg-[var(--color-panel)] px-2 py-1.5">
+          <Search size={14} className="text-[var(--color-muted)]" />
+          <input
+            className="w-full border-none bg-transparent text-sm outline-none"
+            placeholder="행 검색…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+        <label className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
+          <ArrowUpDown size={12} />
+          정렬
+          <select
+            className="rounded-md border border-[var(--color-border)] bg-[var(--color-panel)] px-2 py-1 text-xs text-[var(--color-text)] outline-none"
+            value={sortKey}
+            onChange={(e) => setSortKey(e.target.value as SortKey)}
+          >
+            <option value="none">없음</option>
+            <option value="title">이름</option>
+            {db.properties.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <select
+          className="rounded-md border border-[var(--color-border)] bg-[var(--color-panel)] px-2 py-1 text-xs outline-none"
+          value={sortDir}
+          disabled={sortKey === 'none'}
+          onChange={(e) => setSortDir(e.target.value as SortDir)}
+        >
+          <option value="asc">오름차순</option>
+          <option value="desc">내림차순</option>
+        </select>
+        {statusProp && (
+          <select
+            className="rounded-md border border-[var(--color-border)] bg-[var(--color-panel)] px-2 py-1 text-xs outline-none"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="">모든 {statusProp.name}</option>
+            {(statusProp.options ?? []).map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
+            ))}
+          </select>
+        )}
+        <span className="px-1 text-xs text-[var(--color-muted)]">
+          {rows.length}/{db.rows.length}
+        </span>
+      </div>
+
       {activeView.type === 'board' ? (
-        <BoardView page={page} db={db} groupBy={activeView.groupBy} />
+        <BoardView page={page} db={db} rows={rows} groupBy={activeView.groupBy} />
       ) : activeView.type === 'gallery' ? (
-        <GalleryView page={page} db={db} />
+        <GalleryView page={page} db={db} rows={rows} />
       ) : (
-        <TableView page={page} db={db} updateDbRow={updateDbRow} deleteDbRow={deleteDbRow} addDbRow={addDbRow} />
+        <TableView
+          page={page}
+          db={db}
+          rows={rows}
+          updateDbRow={updateDbRow}
+          deleteDbRow={deleteDbRow}
+          addDbRow={addDbRow}
+        />
       )}
     </div>
   )
@@ -75,12 +158,14 @@ export function DatabaseView({ page }: Props) {
 function TableView({
   page,
   db,
+  rows,
   updateDbRow,
   deleteDbRow,
   addDbRow,
 }: {
   page: Page
   db: Database
+  rows: DbRow[]
   updateDbRow: (
     pageId: string,
     rowId: string,
@@ -102,7 +187,7 @@ function TableView({
           </tr>
         </thead>
         <tbody>
-          {db.rows.map((row) => (
+          {rows.map((row) => (
             <tr key={row.id}>
               <td>
                 <input
@@ -139,7 +224,11 @@ function TableView({
                   ) : prop.type === 'number' ? (
                     <input
                       type="number"
-                      value={row.values[prop.id] === null || row.values[prop.id] === undefined ? '' : String(row.values[prop.id])}
+                      value={
+                        row.values[prop.id] === null || row.values[prop.id] === undefined
+                          ? ''
+                          : String(row.values[prop.id])
+                      }
                       onChange={(e) =>
                         updateDbRow(page.id, row.id, {
                           [prop.id]: e.target.value === '' ? null : Number(e.target.value),
@@ -178,22 +267,34 @@ function TableView({
   )
 }
 
-function BoardView({ page, db, groupBy }: { page: Page; db: Database; groupBy?: string }) {
+function BoardView({
+  page,
+  db,
+  rows,
+  groupBy,
+}: {
+  page: Page
+  db: Database
+  rows: DbRow[]
+  groupBy?: string
+}) {
   const updateDbRow = useStore((s) => s.updateDbRow)
   const addDbRow = useStore((s) => s.addDbRow)
-  const prop = db.properties.find((p) => p.id === groupBy) ?? db.properties.find((p) => p.type === 'status' || p.type === 'select')
+  const prop =
+    db.properties.find((p) => p.id === groupBy) ??
+    db.properties.find((p) => p.type === 'status' || p.type === 'select')
   const columns = prop?.options ?? [{ id: 'none', name: '없음', color: '#64748b' }]
 
   const grouped = useMemo(() => {
-    const map: Record<string, typeof db.rows> = {}
+    const map: Record<string, DbRow[]> = {}
     for (const col of columns) map[col.id] = []
-    for (const row of db.rows) {
+    for (const row of rows) {
       const key = String(row.values[prop?.id ?? ''] ?? columns[0]?.id)
       if (!map[key]) map[key] = []
       map[key].push(row)
     }
     return map
-  }, [db.rows, columns, prop])
+  }, [rows, columns, prop])
 
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -231,7 +332,6 @@ function BoardView({ page, db, groupBy }: { page: Page; db: Database; groupBy?: 
             className="mt-1 flex w-full items-center gap-1 rounded-lg px-2 py-1.5 text-sm text-[var(--color-muted)] hover:bg-[var(--color-panel)]"
             onClick={() => {
               addDbRow(page.id)
-              // newly added row gets first status; user can drag conceptually via select
               setTimeout(() => {
                 const pages = useStore.getState().pages
                 const p = pages.find((x) => x.id === page.id)
@@ -250,13 +350,13 @@ function BoardView({ page, db, groupBy }: { page: Page; db: Database; groupBy?: 
   )
 }
 
-function GalleryView({ page, db }: { page: Page; db: Database }) {
+function GalleryView({ page, db, rows }: { page: Page; db: Database; rows: DbRow[] }) {
   const updateDbRow = useStore((s) => s.updateDbRow)
   const addDbRow = useStore((s) => s.addDbRow)
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {db.rows.map((row) => (
+      {rows.map((row) => (
         <div key={row.id} className="bento-card !p-4">
           <div
             className="mb-3 h-24 rounded-xl"

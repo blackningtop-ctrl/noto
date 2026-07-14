@@ -21,8 +21,11 @@ import {
   FolderSync,
   FileArchive,
   Globe,
+  Undo2,
+  Redo2,
 } from 'lucide-react'
 import { exportMarkdownVault, exportStaticSite } from '../lib/export-vault'
+import { undoWorkspace, redoWorkspace } from '../store'
 import clsx from 'clsx'
 
 interface Item {
@@ -111,6 +114,22 @@ export function CommandPalette({ open, onClose }: Props) {
         label: 'Git & Export',
         icon: <FolderSync size={16} />,
         run: () => setView({ kind: 'export' }),
+      },
+      {
+        id: 'undo',
+        group: '편집',
+        label: '실행 취소',
+        hint: 'Ctrl+Z',
+        icon: <Undo2 size={16} />,
+        run: () => undoWorkspace(),
+      },
+      {
+        id: 'redo',
+        group: '편집',
+        label: '다시 실행',
+        hint: 'Ctrl+Y',
+        icon: <Redo2 size={16} />,
+        run: () => redoWorkspace(),
       },
       {
         id: 'snapshot',
@@ -399,7 +418,7 @@ export function CommandPalette({ open, onClose }: Props) {
           )}
         </div>
         <div className="border-t border-[var(--color-border)] px-4 py-2 text-[11px] text-[var(--color-muted)]">
-          ↑↓ 이동 · Enter 실행 · 템플릿 · Markdown · 페이지 검색
+          ↑↓ 이동 · Enter · Ctrl+Z 실행취소 · Ctrl+K · Ctrl+G 그래프 · Ctrl+E Export
         </div>
       </div>
     </div>

@@ -233,9 +233,20 @@ export async function exportStaticSite(pages: Page[]): Promise<void> {
 
   zip.file('index.html', indexHtml)
 
+  const titleToSlug = new Map<string, string>()
+  for (const p of active) {
+    titleToSlug.set(p.title.trim().toLowerCase(), slugById.get(p.id)!)
+  }
+
+  const mermaidBoot = `
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+</script>`
+
   for (const p of active) {
     const slug = slugById.get(p.id)!
-    const body = pageToStaticHtml(p)
+    const body = pageToStaticHtml(p, titleToSlug, 'relative')
     const html = `<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -256,6 +267,7 @@ export async function exportStaticSite(pages: Page[]): Promise<void> {
       ${body}
     </main>
   </div>
+  ${mermaidBoot}
 </body>
 </html>`
     zip.file(`pages/${slug}.html`, html)
@@ -265,7 +277,11 @@ export async function exportStaticSite(pages: Page[]): Promise<void> {
   downloadBlob(blob, `noto-static-site-${new Date().toISOString().slice(0, 10)}.zip`)
 }
 
-function pageToStaticHtml(page: Page): string {
+function pageToStaticHtml(
+  page: Page,
+  titleToSlug: Map<string, string>,
+  linkMode: 'relative' | 'from-root',
+): string {
   if (page.type === 'database' && page.database) {
     const cols = ['이름', ...page.database.properties.map((p) => p.name)]
     const head = cols.map((c) => `<th>${escapeHtml(c)}</th>`).join('')
@@ -280,6 +296,8 @@ function pageToStaticHtml(page: Page): string {
       .join('')
     return `<table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`
   }
+
+  const inline = (text: string) => inlineWithLinks(text, titleToSlug, linkMode)
 
   return page.blocks
     .map((b) => {
@@ -303,7 +321,7 @@ function pageToStaticHtml(page: Page): string {
         case 'code':
           return `<pre><code>${escapeHtml(b.content)}</code></pre>`
         case 'mermaid':
-          return `<pre class="mermaid-src"><code>${escapeHtml(b.content)}</code></pre><p class="muted">Mermaid source (render in Noto app)</p>`
+          return `<pre class="mermaid">${escapeHtml(b.content)}</pre>`
         case 'api':
           if (!b.api) return ''
           return `<div class="api"><div class="api-head"><span class="method">${escapeHtml(b.api.method)}</span> <code>${escapeHtml(b.api.path)}</code></div><p>${escapeHtml(b.api.summary)}</p><pre><code>${escapeHtml(b.api.responseBody)}</code></pre></div>`
@@ -321,11 +339,24 @@ function pageToStaticHtml(page: Page): string {
     .join('\n')
 }
 
-function inline(text: string): string {
-  return escapeHtml(text).replace(
-    /\[\[([^\]]+)\]\]/g,
-    '<span class="wiki">$1</span>',
-  )
+function inlineWithLinks(
+  text: string,
+  titleToSlug: Map<string, string>,
+  linkMode: 'relative' | 'from-root',
+): string {
+  let html = escapeHtml(text)
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>')
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>')
+  html = html.replace(/\[\[([^\]]+)\]\]/g, (_m, title: string) => {
+    const slug = titleToSlug.get(String(title).trim().toLowerCase())
+    if (slug) {
+      const href = linkMode === 'relative' ? `${slug}.html` : `pages/${slug}.html`
+      return `<a class="wiki" href="${href}">${escapeHtml(title)}</a>`
+    }
+    return `<span class="wiki missing">${escapeHtml(title)}</span>`
+  })
+  return html
 }
 
 function escapeHtml(s: string): string {
@@ -371,7 +402,9 @@ main { padding: 2rem 2.5rem; max-width: 800px; }
 .todo { margin: 0.35rem 0; }
 .api, .git-card { border: 1px solid var(--border); border-radius: 12px; padding: 0.85rem; background: var(--panel); margin: 0.75rem 0; }
 .method { background: #22c55e; color: #fff; font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 4px; }
-.wiki { color: var(--accent); background: #e8f2fc; border-radius: 4px; padding: 0 0.2rem; }
+.wiki { color: var(--accent); background: #e8f2fc; border-radius: 4px; padding: 0 0.2rem; text-decoration: none; }
+.wiki.missing { opacity: 0.65; border-bottom: 1px dashed var(--muted); }
+.mermaid { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 1rem; }
 table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
 th, td { border: 1px solid var(--border); padding: 0.4rem 0.55rem; text-align: left; }
 th { background: #efeee9; }

@@ -102,10 +102,17 @@ export function ExportView() {
                     setMsg({ type: 'err', text: 'ZIP 가져오기에 실패했습니다.' })
                     return
                   }
-                  importWorkspacePages(result.pages, result.snippets)
+                  const merge = confirm(
+                    `${result.pages.length}개 페이지를 가져옵니다.\n\n확인 = 병합 (기존 유지 + 덮어쓰기)\n취소 = 전체 교체`,
+                  )
+                  importWorkspacePages(
+                    result.pages,
+                    result.snippets,
+                    merge ? 'merge' : 'replace',
+                  )
                   setMsg({
                     type: 'ok',
-                    text: `${result.pages.length}개 페이지를 가져왔습니다. (기존 워크스페이스 교체)`,
+                    text: `${result.pages.length}개 페이지 ${merge ? '병합' : '교체'} 완료`,
                   })
                 }
                 input.click()
@@ -162,9 +169,17 @@ export function ExportView() {
               run(async () => {
                 const r = await syncImportFromFolder()
                 if (r.ok && r.pages) {
-                  importWorkspacePages(r.pages, r.snippets)
+                  const merge = confirm(
+                    `${r.pages.length}개 페이지를 가져옵니다.\n\n확인 = 병합\n취소 = 전체 교체`,
+                  )
+                  importWorkspacePages(r.pages, r.snippets, merge ? 'merge' : 'replace')
+                  setMsg({
+                    type: 'ok',
+                    text: `${r.message} (${merge ? '병합' : '교체'})`,
+                  })
+                } else {
+                  setMsg({ type: 'err', text: r.message })
                 }
-                setMsg({ type: r.ok ? 'ok' : 'err', text: r.message })
               })
             }
           />
