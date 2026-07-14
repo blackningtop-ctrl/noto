@@ -142,7 +142,13 @@ export async function runAiAction(
   body: string,
   model?: string,
 ): Promise<string> {
-  return xaiChat(actionPrompt(action, title, body), { model, temperature: 0.5 })
+  // body may contain HTML from rich editor — strip roughly
+  const plain = body
+    .replace(/<span[^>]*data-wiki="([^"]*)"[^>]*>[\s\S]*?<\/span>/gi, '[[$1]]')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return xaiChat(actionPrompt(action, title, plain || body), { model, temperature: 0.5 })
 }
 
 export async function runAiChat(

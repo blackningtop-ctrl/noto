@@ -1,4 +1,5 @@
 import type { Page } from '../types'
+import { stripHtml } from './html-text'
 
 export interface SearchHit {
   page: Page
@@ -38,13 +39,14 @@ export function searchPages(pages: Page[], query: string, limit = 40): SearchHit
     }
 
     for (const b of page.blocks) {
-      const c = (b.content || '').toLowerCase()
+      const raw = stripHtml(b.content || '')
+      const c = raw.toLowerCase()
       for (const t of tokens) {
         if (c.includes(t)) {
           score += 8
           if (!snippet) {
             const idx = c.indexOf(t)
-            snippet = b.content.slice(Math.max(0, idx - 24), idx + t.length + 40)
+            snippet = raw.slice(Math.max(0, idx - 24), idx + t.length + 40)
             match = score >= 40 ? 'mixed' : 'block'
           }
         }

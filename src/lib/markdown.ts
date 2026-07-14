@@ -1,7 +1,10 @@
 import type { Block, BlockType, Page } from '../types'
 import { uid } from './id'
+import { htmlToMarkdownLite, isProbablyHtml } from './html-text'
 
 function escapeMd(s: string) {
+  if (!s) return ''
+  if (isProbablyHtml(s)) return htmlToMarkdownLite(s)
   return s
 }
 

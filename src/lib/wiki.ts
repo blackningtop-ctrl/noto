@@ -1,12 +1,18 @@
 import type { Page } from '../types'
 
 const WIKI_RE = /\[\[([^\]]+)\]\]/g
+const DATA_WIKI_RE = /data-wiki="([^"]+)"/g
 
 export function extractWikiLinks(text: string): string[] {
   const links: string[] = []
   let m: RegExpExecArray | null
   const re = new RegExp(WIKI_RE.source, 'g')
   while ((m = re.exec(text)) !== null) {
+    const t = m[1].trim()
+    if (t) links.push(t)
+  }
+  const re2 = new RegExp(DATA_WIKI_RE.source, 'g')
+  while ((m = re2.exec(text)) !== null) {
     const t = m[1].trim()
     if (t) links.push(t)
   }
