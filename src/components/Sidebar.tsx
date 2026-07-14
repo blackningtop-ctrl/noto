@@ -37,6 +37,7 @@ export function Sidebar() {
   const exportData = useStore((s) => s.exportData)
   const importData = useStore((s) => s.importData)
   const resetWorkspace = useStore((s) => s.resetWorkspace)
+  const setCommandPaletteOpen = useStore((s) => s.setCommandPaletteOpen)
   const pages = useActivePages()
   const favorites = pages.filter((p) => p.favorite)
   const roots = pages.filter((p) => !p.parentId)
@@ -206,10 +207,15 @@ export function Sidebar() {
       <div className="space-y-0.5 px-2">
         <NavItem
           icon={<Search size={16} />}
+          label="커맨드 팔레트"
+          onClick={() => setCommandPaletteOpen(true)}
+          hint="Ctrl+K"
+        />
+        <NavItem
+          icon={<Search size={16} />}
           label="검색"
           active={view.kind === 'search'}
           onClick={() => setView({ kind: 'search' })}
-          hint="⌘K"
         />
         <NavItem
           icon={<Home size={16} />}

@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useStore, usePage } from '../store'
 import { BlockEditor } from './BlockEditor'
 import { DatabaseView } from './DatabaseView'
+import { Backlinks } from './Backlinks'
+import { pageToMarkdown } from '../lib/markdown'
 import { PAGE_ICONS } from '../types'
-import { Star, Trash2, MoreHorizontal, Copy, Image as ImageIcon } from 'lucide-react'
+import { Star, Trash2, MoreHorizontal, Copy, Image as ImageIcon, FileCode2 } from 'lucide-react'
 import clsx from 'clsx'
 
 const COVERS = [
@@ -139,6 +141,23 @@ export function PageView({ pageId }: Props) {
                 </button>
                 <button
                   type="button"
+                  className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-[var(--color-hover)]"
+                  onClick={() => {
+                    const md = pageToMarkdown(page)
+                    const blob = new Blob([md], { type: 'text/markdown' })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = `${(page.title || 'page').replace(/[\\/:*?"<>|]/g, '_')}.md`
+                    a.click()
+                    URL.revokeObjectURL(url)
+                    setMenuOpen(false)
+                  }}
+                >
+                  <FileCode2 size={14} /> Markdown 내보내기
+                </button>
+                <button
+                  type="button"
                   className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[var(--color-danger)] hover:bg-[var(--color-hover)]"
                   onClick={() => {
                     deletePage(page.id)
@@ -169,6 +188,7 @@ export function PageView({ pageId }: Props) {
       ) : (
         <div className="mt-4">
           <BlockEditor pageId={page.id} blocks={page.blocks} />
+          <Backlinks page={page} />
         </div>
       )}
     </div>

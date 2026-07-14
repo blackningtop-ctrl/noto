@@ -28,10 +28,13 @@ export function BentoHome() {
   return (
     <div className="fade-in mx-auto max-w-6xl px-6 py-10">
       <header className="mb-8">
-        <p className="mb-2 text-sm font-medium text-[var(--color-accent)]">무료 · 로컬 · 비공개</p>
+        <p className="mb-2 text-sm font-medium text-[var(--color-accent)]">
+          Noto Dev · Phase 1 · 무료 · 로컬 · 비공개
+        </p>
         <h1 className="text-3xl font-bold tracking-tight md:text-4xl">안녕하세요 👋</h1>
         <p className="mt-2 max-w-xl text-[var(--color-muted)]">
-          Notion 스타일 워크스페이스를 벤토 그리드로 정리했습니다. 모든 데이터는 브라우저에만 저장됩니다.
+          개발자용 워크스페이스 — 코드 · Mermaid · 위키링크 · 템플릿 · Markdown.
+          <span className="mt-1 block text-[var(--color-accent)]">Ctrl+K 로 커맨드 팔레트를 여세요.</span>
         </p>
       </header>
 
@@ -163,21 +166,21 @@ export function BentoHome() {
         {/* Feature tiles */}
         <FeatureTile
           className="span-4"
-          title="블록 에디터"
-          desc="/ 명령, 마크다운, 드래그 정렬, 할 일·코드·콜아웃"
-          emoji="✏️"
+          title="코드 & Mermaid"
+          desc="하이라이트 · 줄번호 · 복사 · 시퀀스/플로우 다이어그램"
+          emoji="💻"
         />
         <FeatureTile
           className="span-4"
-          title="데이터베이스"
-          desc="테이블 · 칸반 보드 · 갤러리 뷰, 속성 커스텀"
-          emoji="📊"
+          title="위키 · 템플릿"
+          desc="[[링크]] 백링크 · ADR · Bug · Sprint · Postmortem"
+          emoji="🔗"
         />
         <FeatureTile
           className="span-4"
-          title="백업"
-          desc="JSON 내보내기/가져오기, 브라우저 localStorage"
-          emoji="💾"
+          title="Ctrl+K · Markdown"
+          desc="커맨드 팔레트, MD/JSON 가져오기·내보내기"
+          emoji="⚡"
         />
       </div>
     </div>

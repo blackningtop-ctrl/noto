@@ -36,6 +36,8 @@
 
 html, body, #root {
   height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 body {
@@ -44,6 +46,11 @@ body {
   background: var(--color-surface);
   color: var(--color-text);
   -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
 }
 
 button, input, textarea, select {
@@ -233,4 +240,108 @@ button, input, textarea, select {
 
 .fade-in {
   animation: fade-in 0.2s ease;
+}
+
+/* Wiki links */
+.wiki-link {
+  display: inline;
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  border: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-accent) 45%, transparent);
+  border-radius: 0.25rem;
+  padding: 0 0.2rem;
+  cursor: pointer;
+  font: inherit;
+}
+
+.wiki-link:hover {
+  background: color-mix(in srgb, var(--color-accent) 20%, transparent);
+}
+
+/* Command palette */
+.cmd-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: min(18vh, 120px);
+  background: rgba(15, 15, 15, 0.45);
+  backdrop-filter: blur(4px);
+}
+
+.cmd-panel {
+  width: min(560px, calc(100vw - 24px));
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+}
+
+/* highlight.js theme (light/dark-ish) */
+.hljs {
+  color: var(--color-text);
+  background: transparent;
+}
+.hljs-comment,
+.hljs-quote {
+  color: #6a737d;
+  font-style: italic;
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-addition {
+  color: #d73a49;
+}
+.dark .hljs-keyword,
+.dark .hljs-selector-tag {
+  color: #ff7b72;
+}
+.hljs-string,
+.hljs-meta .hljs-string,
+.hljs-attribute {
+  color: #032f62;
+}
+.dark .hljs-string,
+.dark .hljs-attribute {
+  color: #a5d6ff;
+}
+.hljs-number,
+.hljs-literal {
+  color: #005cc5;
+}
+.dark .hljs-number,
+.dark .hljs-literal {
+  color: #79c0ff;
+}
+.hljs-title,
+.hljs-section,
+.hljs-name {
+  color: #6f42c1;
+}
+.dark .hljs-title,
+.dark .hljs-name {
+  color: #d2a8ff;
+}
+.hljs-built_in,
+.hljs-type {
+  color: #e36209;
+}
+.dark .hljs-built_in {
+  color: #ffa657;
+}
+.hljs-params {
+  color: var(--color-text);
+}
+.code-block .block-input {
+  padding: 0.75rem;
+}
+
+/* mermaid svg */
+.mermaid, .code-pre svg {
+  max-width: 100%;
+  height: auto;
 }

@@ -8,6 +8,7 @@ export type BlockType =
   | 'todo'
   | 'quote'
   | 'code'
+  | 'mermaid'
   | 'divider'
   | 'callout'
   | 'image'

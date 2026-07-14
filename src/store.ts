@@ -1,8 +1,10 @@
+import { useMemo } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Block, BlockType, Database, DbRow, Page, Property, View } from './types'
 import { createSeedPages } from './lib/seed'
 import { uid } from './lib/id'
+import { getTemplate } from './lib/templates'
 
 interface AppState {
   pages: Page[]
@@ -10,12 +12,23 @@ interface AppState {
   sidebarOpen: boolean
   theme: 'light' | 'dark'
   searchQuery: string
+  commandPaletteOpen: boolean
   setView: (view: View) => void
   setSidebarOpen: (open: boolean) => void
   toggleTheme: () => void
   setSearchQuery: (q: string) => void
+  setCommandPaletteOpen: (open: boolean) => void
 
-  createPage: (opts?: { parentId?: string | null; type?: Page['type']; title?: string }) => string
+  createPage: (opts?: {
+    parentId?: string | null
+    type?: Page['type']
+    title?: string
+    icon?: string
+    blocks?: Block[]
+    database?: Database
+    cover?: string
+  }) => string
+  createFromTemplate: (templateId: string) => string | null
   updatePage: (id: string, patch: Partial<Page>) => void
   deletePage: (id: string) => void
   restorePage: (id: string) => void
@@ -83,6 +96,7 @@ export const useStore = create<AppState>()(
       sidebarOpen: true,
       theme: 'light',
       searchQuery: '',
+      commandPaletteOpen: false,
 
       setView: (view) => set({ view }),
       setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
@@ -93,6 +107,7 @@ export const useStore = create<AppState>()(
           return { theme }
         }),
       setSearchQuery: (searchQuery) => set({ searchQuery }),
+      setCommandPaletteOpen: (commandPaletteOpen) => set({ commandPaletteOpen }),
 
       createPage: (opts = {}) => {
         const id = uid()
@@ -100,18 +115,37 @@ export const useStore = create<AppState>()(
         const page: Page = {
           id,
           title: opts.title ?? (type === 'database' ? '새 데이터베이스' : '제목 없음'),
-          icon: type === 'database' ? '📊' : '📄',
+          icon: opts.icon ?? (type === 'database' ? '📊' : '📄'),
           parentId: opts.parentId ?? null,
           type,
-          blocks: type === 'page' ? emptyBlocks() : [],
-          database: type === 'database' ? emptyDatabase() : undefined,
+          blocks: opts.blocks ?? (type === 'page' ? emptyBlocks() : []),
+          database: opts.database ?? (type === 'database' ? emptyDatabase() : undefined),
+          cover: opts.cover,
           favorite: false,
           deleted: false,
           createdAt: Date.now(),
           updatedAt: Date.now(),
         }
-        set((s) => ({ pages: [...s.pages, page], view: { kind: 'page', pageId: id } }))
+        set((s) => ({
+          pages: [...s.pages, page],
+          view: { kind: 'page', pageId: id },
+          commandPaletteOpen: false,
+        }))
         return id
+      },
+
+      createFromTemplate: (templateId) => {
+        const tpl = getTemplate(templateId)
+        if (!tpl) return null
+        const built = tpl.build()
+        return get().createPage({
+          title: built.title,
+          icon: built.icon,
+          type: built.type,
+          blocks: built.blocks,
+          database: built.database,
+          cover: built.cover,
+        })
       },
 
       updatePage: (id, patch) =>
@@ -229,6 +263,13 @@ export const useStore = create<AppState>()(
           newBlock.open = true
           newBlock.children = []
         }
+        if (type === 'code') {
+          newBlock.language = 'typescript'
+          if (!content) newBlock.content = ''
+        }
+        if (type === 'mermaid' && !content) {
+          newBlock.content = 'flowchart LR\n  A[Start] --> B[Done]'
+        }
         set((s) => ({
           pages: s.pages.map((p) => {
             if (p.id !== pageId) return p
@@ -268,6 +309,12 @@ export const useStore = create<AppState>()(
                 if (type === 'toggle') {
                   next.open = next.open ?? true
                   next.children = next.children ?? []
+                }
+                if (type === 'code') {
+                  next.language = next.language ?? 'typescript'
+                }
+                if (type === 'mermaid' && !next.content) {
+                  next.content = 'flowchart LR\n  A[Start] --> B[Done]'
                 }
                 return next
               }),
@@ -376,7 +423,11 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'noto-workspace-v1',
-      partialize: (s) => ({ pages: s.pages, theme: s.theme, sidebarOpen: s.sidebarOpen }),
+      partialize: (s) => ({
+        pages: s.pages,
+        theme: s.theme,
+        sidebarOpen: s.sidebarOpen,
+      }),
       onRehydrateStorage: () => (state) => {
         if (state?.theme === 'dark') {
           document.documentElement.classList.add('dark')
@@ -386,10 +437,18 @@ export const useStore = create<AppState>()(
   ),
 )
 
+/** Avoid filtering inside useStore selectors — new arrays break React getSnapshot. */
 export function useActivePages() {
-  return useStore((s) => s.pages.filter((p) => !p.deleted))
+  const pages = useStore((s) => s.pages)
+  return useMemo(() => pages.filter((p) => !p.deleted), [pages])
+}
+
+export function useDeletedPages() {
+  const pages = useStore((s) => s.pages)
+  return useMemo(() => pages.filter((p) => p.deleted), [pages])
 }
 
 export function usePage(id: string | undefined) {
-  return useStore((s) => s.pages.find((p) => p.id === id))
+  const pages = useStore((s) => s.pages)
+  return useMemo(() => (id ? pages.find((p) => p.id === id) : undefined), [pages, id])
 }

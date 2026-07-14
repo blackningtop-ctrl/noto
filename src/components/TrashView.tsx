@@ -1,8 +1,8 @@
-import { useStore } from '../store'
+import { useStore, useDeletedPages } from '../store'
 import { RotateCcw, Trash2 } from 'lucide-react'
 
 export function TrashView() {
-  const pages = useStore((s) => s.pages.filter((p) => p.deleted))
+  const pages = useDeletedPages()
   const restorePage = useStore((s) => s.restorePage)
   const permanentlyDelete = useStore((s) => s.permanentlyDelete)
   const emptyTrash = useStore((s) => s.emptyTrash)

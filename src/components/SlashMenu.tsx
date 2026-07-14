@@ -14,6 +14,7 @@ import {
   MessageSquare,
   Image as ImageIcon,
   ChevronRight,
+  GitBranch,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -36,7 +37,8 @@ export const SLASH_ITEMS: SlashItem[] = [
   { type: 'toggle', label: '토글', description: '접을 수 있는 블록', keywords: 'toggle 토글', icon: <ChevronRight size={18} /> },
   { type: 'quote', label: '인용', description: '인용문', keywords: 'quote 인용', icon: <Quote size={18} /> },
   { type: 'callout', label: '콜아웃', description: '강조 박스', keywords: 'callout 콜아웃', icon: <MessageSquare size={18} /> },
-  { type: 'code', label: '코드', description: '코드 블록', keywords: 'code 코드', icon: <Code2 size={18} /> },
+  { type: 'code', label: '코드', description: '하이라이트 · 복사 · 언어', keywords: 'code 코드 highlight', icon: <Code2 size={18} /> },
+  { type: 'mermaid', label: 'Mermaid', description: '다이어그램', keywords: 'mermaid diagram 시퀀스 플로우', icon: <GitBranch size={18} /> },
   { type: 'divider', label: '구분선', description: '시각적 구분', keywords: 'divider 구분선 hr', icon: <Minus size={18} /> },
   { type: 'image', label: '이미지', description: '이미지 URL', keywords: 'image 이미지', icon: <ImageIcon size={18} /> },
 ]

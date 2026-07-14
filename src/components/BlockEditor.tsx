@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import type { Block, BlockType } from '../types'
 import { useStore } from '../store'
 import { SlashMenu } from './SlashMenu'
+import { CodeBlock } from './CodeBlock'
+import { MermaidBlock } from './MermaidBlock'
+import { WikiText } from './WikiText'
 import { GripVertical, Plus, Trash2 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -10,16 +13,17 @@ interface Props {
   blocks: Block[]
 }
 
-const MARKDOWN_MAP: { re: RegExp; type: BlockType; strip: number }[] = [
-  { re: /^###\s/, type: 'heading3', strip: 4 },
-  { re: /^##\s/, type: 'heading2', strip: 3 },
-  { re: /^#\s/, type: 'heading1', strip: 2 },
-  { re: /^>\s/, type: 'quote', strip: 2 },
-  { re: /^[-*]\s/, type: 'bullet', strip: 2 },
-  { re: /^\d+\.\s/, type: 'numbered', strip: 3 },
-  { re: /^\[\]\s?/, type: 'todo', strip: 3 },
-  { re: /^```\s?/, type: 'code', strip: 3 },
-  { re: /^---$/, type: 'divider', strip: 3 },
+const MARKDOWN_MAP: { re: RegExp; type: BlockType }[] = [
+  { re: /^###\s/, type: 'heading3' },
+  { re: /^##\s/, type: 'heading2' },
+  { re: /^#\s/, type: 'heading1' },
+  { re: /^>\s/, type: 'quote' },
+  { re: /^[-*]\s/, type: 'bullet' },
+  { re: /^\d+\.\s/, type: 'numbered' },
+  { re: /^\[\]\s?/, type: 'todo' },
+  { re: /^```mermaid\s?/, type: 'mermaid' },
+  { re: /^```\s?/, type: 'code' },
+  { re: /^---$/, type: 'divider' },
 ]
 
 function classFor(type: BlockType) {
@@ -32,8 +36,6 @@ function classFor(type: BlockType) {
       return 'prose-h3'
     case 'quote':
       return 'prose-quote'
-    case 'code':
-      return 'prose-code'
     case 'callout':
       return 'prose-callout'
     default:
@@ -79,9 +81,13 @@ export function BlockEditor({ pageId, blocks }: Props) {
 
     for (const rule of MARKDOWN_MAP) {
       if (rule.re.test(value)) {
-        const content = value.replace(rule.re, '')
+        let content = value.replace(rule.re, '')
+        if (rule.type === 'mermaid') content = content || 'flowchart LR\n  A --> B'
         changeBlockType(pageId, block.id, rule.type)
-        updateBlock(pageId, block.id, { content })
+        updateBlock(pageId, block.id, {
+          content,
+          ...(rule.type === 'code' ? { language: 'typescript' } : {}),
+        })
         return
       }
     }
@@ -92,7 +98,8 @@ export function BlockEditor({ pageId, blocks }: Props) {
   const onKeyDown = (e: React.KeyboardEvent, block: Block, index: number) => {
     if (slash) return
 
-    if (e.key === 'Enter' && !e.shiftKey && block.type !== 'code') {
+    const isCodeLike = block.type === 'code' || block.type === 'mermaid'
+    if (e.key === 'Enter' && !e.shiftKey && !isCodeLike) {
       e.preventDefault()
       const id = addBlock(pageId, block.id, 'paragraph')
       focus(id)
@@ -105,7 +112,7 @@ export function BlockEditor({ pageId, blocks }: Props) {
       if (prev) focus(prev.id)
     }
 
-    if (e.key === 'ArrowUp' && index > 0) {
+    if (e.key === 'ArrowUp' && index > 0 && !isCodeLike) {
       const el = e.currentTarget as HTMLTextAreaElement
       if (el.selectionStart === 0) {
         e.preventDefault()
@@ -113,7 +120,7 @@ export function BlockEditor({ pageId, blocks }: Props) {
       }
     }
 
-    if (e.key === 'ArrowDown' && index < blocks.length - 1) {
+    if (e.key === 'ArrowDown' && index < blocks.length - 1 && !isCodeLike) {
       const el = e.currentTarget as HTMLTextAreaElement
       if (el.selectionStart === el.value.length) {
         e.preventDefault()
@@ -125,7 +132,15 @@ export function BlockEditor({ pageId, blocks }: Props) {
   const selectSlash = (type: BlockType) => {
     if (!slash) return
     changeBlockType(pageId, slash.blockId, type)
-    updateBlock(pageId, slash.blockId, { content: type === 'divider' ? '' : '' })
+    if (type === 'mermaid') {
+      updateBlock(pageId, slash.blockId, {
+        content: 'flowchart LR\n  A[Start] --> B[Done]',
+      })
+    } else if (type === 'code') {
+      updateBlock(pageId, slash.blockId, { content: '', language: 'typescript' })
+    } else {
+      updateBlock(pageId, slash.blockId, { content: '' })
+    }
     setSlash(null)
     if (type === 'divider') {
       const id = addBlock(pageId, slash.blockId, 'paragraph')
@@ -136,12 +151,12 @@ export function BlockEditor({ pageId, blocks }: Props) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 pb-32 pt-2">
+    <div className="mx-auto w-full max-w-3xl px-4 pb-8 pt-2">
       {blocks.map((block, index) => (
         <div
           key={block.id}
           className="block-row group relative flex items-start gap-1 py-0.5"
-          draggable
+          draggable={block.type !== 'code' && block.type !== 'mermaid'}
           onDragStart={() => setDragIndex(index)}
           onDragOver={(e) => e.preventDefault()}
           onDrop={() => {
@@ -204,12 +219,31 @@ export function BlockEditor({ pageId, blocks }: Props) {
                   />
                 )}
               </div>
+            ) : block.type === 'code' ? (
+              <CodeBlock
+                content={block.content}
+                language={block.language || 'typescript'}
+                onChange={(content) => updateBlock(pageId, block.id, { content })}
+                onLanguageChange={(language) => updateBlock(pageId, block.id, { language })}
+                onKeyDown={(e) => onKeyDown(e, block, index)}
+                textareaRef={(el) => {
+                  refs.current[block.id] = el
+                }}
+              />
+            ) : block.type === 'mermaid' ? (
+              <MermaidBlock
+                content={block.content}
+                onChange={(content) => updateBlock(pageId, block.id, { content })}
+                onKeyDown={(e) => onKeyDown(e, block, index)}
+                textareaRef={(el) => {
+                  refs.current[block.id] = el
+                }}
+              />
             ) : (
               <div
                 className={clsx(
                   'flex items-start gap-2',
                   block.type === 'callout' && 'prose-callout',
-                  block.type === 'code' && 'prose-code !p-0',
                 )}
               >
                 {block.type === 'todo' && (
@@ -224,7 +258,10 @@ export function BlockEditor({ pageId, blocks }: Props) {
                   <span className="mt-2 select-none text-lg leading-none">•</span>
                 )}
                 {block.type === 'numbered' && (
-                  <span className="mt-1.5 w-5 shrink-0 select-none text-sm" style={{ color: 'var(--color-muted)' }}>
+                  <span
+                    className="mt-1.5 w-5 shrink-0 select-none text-sm"
+                    style={{ color: 'var(--color-muted)' }}
+                  >
                     {blocks.slice(0, index + 1).filter((b) => b.type === 'numbered').length}.
                   </span>
                 )}
@@ -234,25 +271,21 @@ export function BlockEditor({ pageId, blocks }: Props) {
                     className="mt-1.5"
                     onClick={() => updateBlock(pageId, block.id, { open: !block.open })}
                   >
-                    <span className={clsx('inline-block transition', block.open && 'rotate-90')}>▸</span>
+                    <span className={clsx('inline-block transition', block.open && 'rotate-90')}>
+                      ▸
+                    </span>
                   </button>
                 )}
 
-                <textarea
-                  ref={(el) => {
-                    refs.current[block.id] = el
-                    if (el) autoResize(el)
-                  }}
+                <WikiText
                   className={clsx(
-                    'block-input',
                     classFor(block.type),
                     block.type === 'todo' && block.checked && 'line-through opacity-55',
-                    block.type === 'code' && 'font-mono text-sm',
                   )}
-                  rows={1}
+                  value={block.content}
                   placeholder={
                     index === 0 && !block.content
-                      ? "입력하거나 '/' 로 명령…"
+                      ? "입력 · '/' 명령 · [[위키링크]] …"
                       : block.type === 'heading1'
                         ? '제목 1'
                         : block.type === 'heading2'
@@ -261,13 +294,14 @@ export function BlockEditor({ pageId, blocks }: Props) {
                             ? '제목 3'
                             : ''
                   }
-                  value={block.content}
-                  onChange={(e) => {
-                    onChange(block, e.target.value)
-                    autoResize(e.target)
+                  onChange={(value) => {
+                    onChange(block, value)
                   }}
                   onKeyDown={(e) => onKeyDown(e, block, index)}
-                  spellCheck={block.type !== 'code'}
+                  textareaRef={(el) => {
+                    refs.current[block.id] = el
+                    if (el) autoResize(el)
+                  }}
                 />
               </div>
             )}
